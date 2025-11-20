@@ -18,7 +18,7 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:postgres@localhost:5432/carbon_footprint'
+        'postgresql://postgres:postgres@localhost:5433/carbon_footprint'
     FLASK_ENV = 'development'
 
 
@@ -35,8 +35,10 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
+    # Use SQLite in-memory for fast tests (no database server needed)
+    # Override with TEST_DATABASE_URL environment variable to use PostgreSQL for CI/CD
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-        'postgresql://postgres:postgres@localhost:5432/carbon_footprint_test'
+        'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
 
 

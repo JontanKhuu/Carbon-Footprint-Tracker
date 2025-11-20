@@ -11,6 +11,7 @@ def app():
     with app.app_context():
         db.create_all()
         yield app
+        db.session.remove()
         db.drop_all()
 
 
@@ -36,13 +37,14 @@ def test_create_user(client):
     assert 'password' not in data  # Password should not be in response
 
 
-def test_get_users(client):
+def test_get_users(client, app):
     """Test getting all users"""
     # Create test user
-    user = User(username='testuser', email='test@example.com')
-    user.set_password('testpass123')
-    db.session.add(user)
-    db.session.commit()
+    with app.app_context():
+        user = User(username='testuser', email='test@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
     
     response = client.get('/api/users')
     assert response.status_code == 200

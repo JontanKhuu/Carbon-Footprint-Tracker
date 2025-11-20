@@ -17,6 +17,7 @@ alembic==1.17.2
 # Testing
 pytest==9.0.1
 pytest-cov==5.0.0
+pytest-timeout==2.3.1
 
 # Data science / ML (for carbon footprint calculations)
 numpy==2.3.5

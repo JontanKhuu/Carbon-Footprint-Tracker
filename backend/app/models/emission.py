@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -20,8 +20,8 @@ class Emission(db.Model):
     # Metadata
     date = db.Column(db.Date, nullable=False, index=True)
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     def to_dict(self):
         """Convert emission to dictionary"""
