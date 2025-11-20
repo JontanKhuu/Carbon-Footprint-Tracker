@@ -1,22 +1,10 @@
 import { useState,useEffect } from 'react'
 import './App.css'
 import { getUsers, getEmissions } from './services/api'
+import type { User, Emission } from './types'
 
 
 function App() {
-  interface User {
-    id: number;
-    username: string;
-    email: string;
-  }
-  
-  interface Emission {
-    id: number;
-    user_id: number;
-    category: string;
-    activity: string;
-  }
-
   const [users, setUsers] = useState<User[]>([]);
   const [emissions, setEmissions] = useState<Emission[]>([]);
 
@@ -24,15 +12,15 @@ function App() {
     const fetchData = async () => {
       try {
         const response = await getUsers();
-        const emissions = await getEmissions();
+        const emissionsResponse = await getEmissions();
         setUsers(response.data);
-        setEmissions(emissions.data);
+        setEmissions(emissionsResponse.data);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     }
     fetchData();
-  }, [users,emissions]);
+  }, []);
 
   return (
     <>

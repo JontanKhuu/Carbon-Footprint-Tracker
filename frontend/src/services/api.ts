@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { EmissionFilters, CreateEmissionRequest, EmissionStats, User, Emission } from '../types';
 
 // Create an axios instance with a base URL
 const api = axios.create({
@@ -11,14 +12,14 @@ const api = axios.create({
 export default api;
 
 // Get all users
-export const getUsers = () => api.get('/users');
+export const getUsers = () => api.get<User[]>('/users');
 
 // Get all emissions
-export const getEmissions = (params?: any) => api.get('/emissions', { params });
+export const getEmissions = (params?: EmissionFilters) => api.get<Emission[]>('/emissions', { params });
 
 // Create an emission
-export const createEmission = (data: any) => api.post('/emissions', data);
+export const createEmission = (data: CreateEmissionRequest) => api.post<Emission>('/emissions', data);
 
 // Get statistics
-export const getEmissionStats = (params?: any) => api.get('/emissions/stats', { params });
+export const getEmissionStats = (params?: EmissionFilters) => api.get<EmissionStats>('/emissions/stats', { params });
 
