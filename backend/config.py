@@ -11,7 +11,7 @@ class Config:
     SQLALCHEMY_RECORD_QUERIES = True
     
     # CORS settings
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 
 
 class DevelopmentConfig(Config):

@@ -1,33 +1,52 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState,useEffect } from 'react'
 import './App.css'
+import { getUsers, getEmissions } from './services/api'
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  interface User {
+    id: number;
+    username: string;
+    email: string;
+  }
+  
+  interface Emission {
+    id: number;
+    user_id: number;
+    category: string;
+    activity: string;
+  }
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [emissions, setEmissions] = useState<Emission[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await getUsers();
+        const emissions = await getEmissions();
+        setUsers(response.data);
+        setEmissions(emissions.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchData();
+  }, [users,emissions]);
 
   return (
     <>
+      <h1>Carbon Footprint Tracker</h1>
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <h2>Users: {users.length}</h2>
+        <h2>Emissions: {emissions.length}</h2>
+        {/* Or display the actual data */}
+        {emissions.map(emission => (
+          <div key={emission.id}>
+            {emission.category}: {emission.activity}
+          </div>
+        ))}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }
