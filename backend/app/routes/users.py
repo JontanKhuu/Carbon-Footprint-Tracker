@@ -87,3 +87,26 @@ def delete_user(user_id):
     
     return jsonify({'message': 'User deleted successfully'}), 200
 
+@users_bp.route('/login', methods=['POST'])
+def login():
+    """Login a user"""
+    data = request.get_json()
+    
+    # Check if usernameOrEmail and password are provided
+    if not data or 'usernameOrEmail' not in data or 'password' not in data:
+        return jsonify({'error': 'Missing username/email or password'}), 400
+    
+    username_or_email = data['usernameOrEmail']
+    password = data['password']
+    
+    # Try to find user by username or email
+    user = User.query.filter(
+        (User.username == username_or_email) | (User.email == username_or_email)
+    ).first()
+    
+    # Check if user exists and password is correct
+    if not user or not user.check_password(password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    
+    # Return user data (in a real app, you'd return a JWT token here)
+    return jsonify(user.to_dict()), 200

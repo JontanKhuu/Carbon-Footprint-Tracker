@@ -1,42 +1,25 @@
-import { useState,useEffect } from 'react'
 import './App.css'
-import { getUsers, getEmissions } from './services/api'
-import type { User, Emission } from './types'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Registration from './pages/Registration';
 
 
 function App() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [emissions, setEmissions] = useState<Emission[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await getUsers();
-        const emissionsResponse = await getEmissions();
-        setUsers(response.data);
-        setEmissions(emissionsResponse.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    }
-    fetchData();
-  }, []);
-
   return (
-    <>
-      <h1>Carbon Footprint Tracker</h1>
-      <div>
-        <h2>Users: {users.length}</h2>
-        <h2>Emissions: {emissions.length}</h2>
-        {/* Or display the actual data */}
-        {emissions.map(emission => (
-          <div key={emission.id}>
-            {emission.category}: {emission.activity}
-          </div>
-        ))}
-      </div>
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="login" element={<Login />} />
+          <Route path="registration" element={<Registration />} /> 
+          <Route path="dashboard" element={<Dashboard />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App

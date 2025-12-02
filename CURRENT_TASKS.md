@@ -44,18 +44,18 @@ docker-compose exec backend flask db upgrade
 ---
 
 ### 4. Basic Frontend Layout
-- [ ] Replace default Vite template in `App.tsx`
-- [ ] Create basic layout with header/navigation
-- [ ] Set up React Router
-- [ ] Create placeholder pages (Home, Login, Dashboard)
+- [✅] Replace default Vite template in `App.tsx`
+- [✅] Create basic layout with header/navigation
+- [✅] Set up React Router
+- [✅] Create placeholder pages (Home, Login, Dashboard)
 
 **Goal:** Get basic structure in place.
 
 ---
 
 ### 5. Authentication (Start Simple)
-- [ ] Create Login page component
-- [ ] Create Registration page component
+- [✅] Create Login page component
+- [✅] Create Registration page component
 - [ ] Implement login API call
 - [ ] Store auth token (localStorage for now)
 - [ ] Add basic protected routes

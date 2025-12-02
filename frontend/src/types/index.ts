@@ -55,3 +55,13 @@ export interface EmissionStats {
   }>;
 }
 
+export interface RegisterUserRequest {
+  username: string,
+  email: string, 
+  password: string,
+}
+
+export interface LoginUser {
+  usernameOrEmail: string,
+  password: string,
+}
