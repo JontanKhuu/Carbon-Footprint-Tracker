@@ -1,0 +1,92 @@
+# Latest Changes Log
+
+## Date: 2025-12-08
+## Task: Added logout functionality and user welcome message
+
+### What I Did:
+Added logout button and welcome message showing the logged-in user's username in the navigation header.
+
+### Step-by-Step Process:
+
+#### 1. Enhanced Layout Component
+- **File modified:** `frontend/src/components/Layout.tsx`
+- **Changes:**
+  - Imported `useAuth` hook to access user and logout function
+  - Added conditional rendering based on authentication status
+  - Added welcome message showing username when logged in
+  - Added logout button with styling
+  - Updated navigation to show different links for authenticated vs non-authenticated users
+  - Improved header styling with better layout and spacing
+
+#### 2. Added Welcome Message
+- **Feature:** Displays "Welcome, <username>" in the header
+- **Location:** Right side of navigation bar
+- **Conditional:** Only shows when user is authenticated
+- **Styling:** Gray text with bold username
+
+#### 3. Added Logout Button
+- **Feature:** Red logout button in the header
+- **Functionality:** Calls `logout()` from AuthContext
+- **Styling:**
+  - Red background (#dc3545)
+  - White text
+  - Hover effect (darker red)
+  - Rounded corners
+  - Proper padding and sizing
+- **Location:** Next to welcome message in header
+
+#### 4. Improved Navigation
+- **Conditional links:**
+  - When authenticated: Shows Dashboard and Add Emission links
+  - When not authenticated: Shows Login and Register links
+- **Always visible:** Home link
+- **Better styling:** Improved spacing, colors, and layout
+
+#### 5. Enhanced Header Styling
+- **Layout:** Flexbox with space-between for proper alignment
+- **Styling:**
+  - Background color (#f8f9fa)
+  - Border bottom for separation
+  - Max width container (1200px)
+  - Better spacing and padding
+- **Responsive:** Flex layout adapts to screen size
+
+### Files Modified:
+1. `frontend/src/components/Layout.tsx` - Complete rewrite with authentication-aware navigation
+
+### Key Implementation Details:
+
+**Authentication State:**
+- Uses `useAuth()` hook to get `user`, `logout`, and `isAuthenticated`
+- Conditionally renders UI based on authentication status
+
+**Logout Functionality:**
+- Calls `logout()` from AuthContext which:
+  - Removes user from localStorage
+  - Clears user state
+  - Navigates to login page
+
+**User Display:**
+- Shows username from `user.username`
+- Displays "Welcome, <username>" when logged in
+- Shows "Not logged in" when not authenticated
+
+**Navigation Logic:**
+- Authenticated users see: Home, Dashboard, Add Emission
+- Non-authenticated users see: Home, Login, Register
+- All users see the welcome/logout section (with appropriate content)
+
+### How to Test:
+1. Log in to the application
+2. Verify welcome message appears with your username
+3. Verify logout button appears in header
+4. Click logout button
+5. Verify you're redirected to login page
+6. Verify welcome message and logout button disappear
+7. Verify navigation shows Login/Register links instead of Dashboard/Add Emission
+
+### User Experience Improvements:
+- Users can now easily see who they're logged in as
+- Clear logout functionality available at all times
+- Navigation adapts based on authentication status
+- Better visual hierarchy and organization in header
