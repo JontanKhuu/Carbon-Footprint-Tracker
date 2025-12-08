@@ -3,18 +3,18 @@
 ## 🚀 Phase 1: Core Setup & Database (Priority: High)
 
 ### Database Setup
-- [ ] Run database migrations in Docker container
+- [✅] Run database migrations in Docker container
   - `docker-compose exec backend flask db init`
   - `docker-compose exec backend flask db migrate -m "Initial migration"`
   - `docker-compose exec backend flask db upgrade`
-- [ ] Verify database connection and tables are created
-- [ ] Test API endpoints with sample data
+- [✅] Verify database connection and tables are created
+- [✅] Test API endpoints with sample data
 
 ### Backend Enhancements
 - [ ] Add authentication/authorization (JWT tokens)
-  - User login endpoint
-  - User registration endpoint
-  - Protected routes middleware
+  - [✅] User login endpoint
+  - [✅] User registration endpoint
+  - [ ] Protected routes middleware (backend)
 - [ ] Add input validation and error handling
 - [ ] Create emission calculation service
   - Calculate CO2 equivalent based on activity type
@@ -26,21 +26,21 @@
 ## 🎨 Phase 2: Frontend Core (Priority: High)
 
 ### Setup & Configuration
-- [ ] Set up API client (axios) configuration
-- [ ] Create environment variables for API URL
-- [ ] Set up routing (React Router)
-- [ ] Create basic layout components (Header, Footer, Navigation)
+- [✅] Set up API client (axios) configuration
+- [✅] Create environment variables for API URL
+- [✅] Set up routing (React Router)
+- [✅] Create basic layout components (Header, Footer, Navigation)
 
 ### Authentication Pages
-- [ ] Create Login page
-- [ ] Create Registration/Signup page
-- [ ] Implement authentication state management
-- [ ] Add protected route wrapper
+- [✅] Create Login page
+- [✅] Create Registration/Signup page
+- [✅] Implement authentication state management
+- [✅] Add protected route wrapper
 
 ### Main Dashboard
-- [ ] Create Dashboard/Home page
+- [✅] Create Dashboard/Home page (basic version)
 - [ ] Display user's total carbon footprint
-- [ ] Show recent emissions
+- [✅] Show recent emissions (basic list)
 - [ ] Display statistics/charts
 
 ---
@@ -196,16 +196,22 @@
 - ✅ Database models defined
 - ✅ Docker configuration complete
 - ✅ CI/CD pipeline configured
-- ⏳ Frontend needs to be built
-- ⏳ Authentication not implemented
+- ✅ Frontend basic structure built
+- ✅ Authentication pages and state management implemented
+- ⏳ JWT tokens not implemented (using localStorage for now)
 - ⏳ Emission calculation logic needed
+- ⏳ Add Emission form needed
+- ⏳ Statistics/charts needed
 
 ### Next Immediate Steps
-1. Run database migrations
-2. Test backend API endpoints
-3. Set up frontend API client
-4. Create basic frontend layout
-5. Build login/registration pages
+1. ✅ Run database migrations
+2. ✅ Test backend API endpoints
+3. ✅ Set up frontend API client
+4. ✅ Create basic frontend layout
+5. ✅ Build login/registration pages
+6. Create "Add Emission" form
+7. Improve Dashboard with statistics
+8. Add emission calculation service
 
 ---
 

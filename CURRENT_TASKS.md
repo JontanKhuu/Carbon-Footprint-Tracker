@@ -106,6 +106,92 @@ You'll know you're ready to move on when:
 
 ---
 
+---
+
+## 🎯 Next Phase: Core Emission Tracking Features
+
+### 6. Create "Add Emission" Form
+- [ ] Create AddEmission page component
+- [ ] Add form fields:
+  - Category selection dropdown (transport, energy, food, etc.)
+  - Activity type dropdown
+  - Amount input field
+  - Unit selection (km, kWh, kg, etc.)
+  - Date picker
+  - Description textarea
+- [ ] Add form validation
+- [ ] Connect form submission to backend API
+- [ ] Show success/error messages
+- [ ] Redirect to dashboard after successful submission
+
+**Goal:** Users can add new emission records through the UI.
+
+---
+
+### 7. Improve Dashboard
+- [ ] Display user's total carbon footprint (sum of all emissions)
+- [ ] Show total CO2 equivalent in a prominent way
+- [ ] Display recent emissions in a better format (table or cards)
+- [ ] Add basic statistics:
+  - Total emissions count
+  - Emissions by category
+  - This month's total
+- [ ] Filter emissions by logged-in user (currently shows all users' emissions)
+
+**Goal:** Dashboard provides useful overview of user's carbon footprint.
+
+---
+
+### 8. Create Emission Calculation Service (Backend)
+- [ ] Create `backend/app/services/emission_calculator.py`
+- [ ] Define emission factors for common activities:
+  - Transport: car (per km), plane (per km), train (per km)
+  - Energy: electricity (per kWh), gas (per m³)
+  - Food: various food types
+- [ ] Create calculation function that takes activity, amount, unit and returns CO2 equivalent
+- [ ] Update emission creation endpoint to use calculator (make co2_equivalent optional in request)
+- [ ] Add validation for supported activities
+
+**Goal:** Automatically calculate CO2 equivalent instead of requiring manual input.
+
+---
+
+### 9. Create Emissions List Page
+- [ ] Create EmissionsList page component
+- [ ] Display emissions in a table or card layout
+- [ ] Add filtering options:
+  - By category
+  - By date range
+- [ ] Add sorting (by date, by amount, by CO2 equivalent)
+- [ ] Add edit functionality (link to edit form)
+- [ ] Add delete functionality with confirmation
+- [ ] Show loading state while fetching
+
+**Goal:** Users can view, filter, and manage their emissions.
+
+---
+
+## 📋 This Week's Focus (Next Steps)
+
+**Priority Order:**
+1. Create "Add Emission" form (3-4 hours)
+2. Improve Dashboard with statistics (2-3 hours)
+3. Create emission calculation service (2-3 hours)
+4. Create Emissions list page (2-3 hours)
+
+**Total Estimated Time:** ~9-13 hours
+
+---
+
+## 💡 Tips for Next Phase
+
+- **Start with the form:** The "Add Emission" form is the core feature - get it working first
+- **Use the calculator:** Once the emission calculation service is ready, update the form to use it
+- **Test with real data:** Create a few test emissions to see how the dashboard looks
+- **Keep it simple:** Don't overcomplicate the UI - focus on functionality first
+
+---
+
 **Last Updated:** Today
-**Current Phase:** Setup & Core Functionality
+**Current Phase:** Core Emission Tracking Features
 
