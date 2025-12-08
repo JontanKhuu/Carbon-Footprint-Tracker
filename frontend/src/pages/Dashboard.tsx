@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getUsers, getEmissions } from '../services/api'
 import type { User, Emission } from '../types'
 
@@ -23,6 +24,22 @@ function Dashboard() {
   return (
     <div>
       <h1>Carbon Footprint Dashboard</h1>
+      <div style={{ marginBottom: '20px' }}>
+        <Link 
+          to="/add-emission" 
+          style={{
+            display: 'inline-block',
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '4px',
+            fontWeight: 'bold'
+          }}
+        >
+          + Add New Emission
+        </Link>
+      </div>
       <div>
         <h2>Users: {users.length}</h2>
         <h2>Emissions: {emissions.length}</h2>

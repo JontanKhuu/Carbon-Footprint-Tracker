@@ -111,18 +111,18 @@ You'll know you're ready to move on when:
 ## 🎯 Next Phase: Core Emission Tracking Features
 
 ### 6. Create "Add Emission" Form
-- [ ] Create AddEmission page component
-- [ ] Add form fields:
+- [✅] Create AddEmission page component
+- [✅] Add form fields:
   - Category selection dropdown (transport, energy, food, etc.)
   - Activity type dropdown
   - Amount input field
   - Unit selection (km, kWh, kg, etc.)
   - Date picker
   - Description textarea
-- [ ] Add form validation
-- [ ] Connect form submission to backend API
-- [ ] Show success/error messages
-- [ ] Redirect to dashboard after successful submission
+- [✅] Add form validation
+- [✅] Connect form submission to backend API
+- [✅] Show success/error messages
+- [✅] Redirect to dashboard after successful submission
 
 **Goal:** Users can add new emission records through the UI.
 
