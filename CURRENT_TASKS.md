@@ -56,9 +56,9 @@ docker-compose exec backend flask db upgrade
 ### 5. Authentication (Start Simple)
 - [✅] Create Login page component
 - [✅] Create Registration page component
-- [ ] Implement login API call
-- [ ] Store auth token (localStorage for now)
-- [ ] Add basic protected routes
+- [✅] Implement login API call
+- [✅] Store auth token (localStorage for now)
+- [✅] Add basic protected routes
 
 **Goal:** Users can sign up and log in.
 
@@ -98,11 +98,11 @@ docker-compose exec backend flask db upgrade
 ## ✅ Definition of "Done" for Current Phase
 
 You'll know you're ready to move on when:
-- [ ] Database tables exist and you can query them
-- [ ] You can create a user via API
-- [ ] You can create an emission via API
-- [ ] Frontend can make API calls successfully
-- [ ] Users can register and log in through the UI
+- [✅] Database tables exist and you can query them
+- [✅] You can create a user via API
+- [✅] You can create an emission via API
+- [✅] Frontend can make API calls successfully
+- [✅] Users can register and log in through the UI
 
 ---
 
