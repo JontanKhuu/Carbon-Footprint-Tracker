@@ -129,14 +129,14 @@ You'll know you're ready to move on when:
 ---
 
 ### 7. Improve Dashboard
-- [ ] Display user's total carbon footprint (sum of all emissions)
-- [ ] Show total CO2 equivalent in a prominent way
-- [ ] Display recent emissions in a better format (table or cards)
-- [ ] Add basic statistics:
+- [✅] Display user's total carbon footprint (sum of all emissions)
+- [✅] Show total CO2 equivalent in a prominent way
+- [✅] Display recent emissions in a better format (table or cards)
+- [✅] Add basic statistics:
   - Total emissions count
   - Emissions by category
   - This month's total
-- [ ] Filter emissions by logged-in user (currently shows all users' emissions)
+- [✅] Filter emissions by logged-in user (currently shows all users' emissions)
 
 **Goal:** Dashboard provides useful overview of user's carbon footprint.
 
