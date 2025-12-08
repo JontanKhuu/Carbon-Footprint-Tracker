@@ -1,0 +1,71 @@
+# Latest Changes Log
+
+## Date: 2025-12-08
+## Task: Fixed timezone issue in AddEmission.tsx date initialization
+
+### What I Did:
+Fixed a timezone bug where the default date in the Add Emission form was using UTC instead of local timezone, causing users in timezones behind UTC to see the previous day as the default.
+
+### Step-by-Step Process:
+
+#### 1. Identified the Issue
+- **Problem:** `new Date().toISOString().split('T')[0]` converts dates to UTC
+- **Example:** User in UTC-5 at 11 PM on Dec 8 would see Dec 7 as default date
+- **Affected file:** `frontend/src/pages/AddEmission.tsx` (line 71)
+
+#### 2. Added Helper Function
+- **Function name:** `formatDateLocal`
+- **Purpose:** Format dates using local timezone instead of UTC
+- **Implementation:**
+  ```typescript
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  ```
+- **Why this works:** Uses `getFullYear()`, `getMonth()`, and `getDate()` which operate in local timezone
+
+#### 3. Fixed Date Initialization
+- **File:** `frontend/src/pages/AddEmission.tsx`
+- **Change:**
+  - Added `formatDateLocal` helper function before the component
+  - Replaced `new Date().toISOString().split('T')[0]` with `formatDateLocal(new Date())`
+  - Updated comment to clarify local timezone usage
+- **Impact:** Default date in form now uses user's local timezone
+
+### Files Modified:
+1. `frontend/src/pages/AddEmission.tsx` - Fixed default date initialization
+
+### Key Implementation Details:
+
+**Why `toISOString()` was problematic:**
+- `toISOString()` always returns UTC time
+- For users behind UTC, a local date like "Dec 8, 11 PM" becomes "Dec 9, 4 AM UTC"
+- Splitting by 'T' and taking [0] gives "Dec 9" instead of "Dec 8"
+
+**Why `formatDateLocal()` works:**
+- Uses local timezone methods: `getFullYear()`, `getMonth()`, `getDate()`
+- These methods return values based on user's system timezone
+- No UTC conversion happens, so dates match user expectations
+
+**Date formatting:**
+- `getMonth()` returns 0-11, so we add 1
+- `padStart(2, '0')` ensures two-digit format (e.g., "01" instead of "1")
+- Result is always YYYY-MM-DD format compatible with HTML date inputs
+
+### Testing:
+1. Test in different timezones (especially behind UTC like UTC-5, UTC-8)
+2. Verify default date in Add Emission form shows today's date in local timezone
+3. Test edge cases:
+   - Late evening (11 PM) in timezone behind UTC
+   - Early morning (1 AM) in timezone ahead of UTC
+   - Date boundaries (end of month, beginning of month)
+
+### How to Replicate:
+1. Identify uses of `toISOString().split('T')[0]` for date formatting
+2. Create `formatDateLocal` helper function using local timezone methods
+3. Replace all instances with `formatDateLocal(date)`
+4. Test in different timezones to verify correctness
+
