@@ -1,71 +1,92 @@
 # Latest Changes Log
 
 ## Date: 2025-12-08
-## Task: Fixed timezone issue in AddEmission.tsx date initialization
+## Task: Added logout functionality and user welcome message
 
 ### What I Did:
-Fixed a timezone bug where the default date in the Add Emission form was using UTC instead of local timezone, causing users in timezones behind UTC to see the previous day as the default.
+Added logout button and welcome message showing the logged-in user's username in the navigation header.
 
 ### Step-by-Step Process:
 
-#### 1. Identified the Issue
-- **Problem:** `new Date().toISOString().split('T')[0]` converts dates to UTC
-- **Example:** User in UTC-5 at 11 PM on Dec 8 would see Dec 7 as default date
-- **Affected file:** `frontend/src/pages/AddEmission.tsx` (line 71)
+#### 1. Enhanced Layout Component
+- **File modified:** `frontend/src/components/Layout.tsx`
+- **Changes:**
+  - Imported `useAuth` hook to access user and logout function
+  - Added conditional rendering based on authentication status
+  - Added welcome message showing username when logged in
+  - Added logout button with styling
+  - Updated navigation to show different links for authenticated vs non-authenticated users
+  - Improved header styling with better layout and spacing
 
-#### 2. Added Helper Function
-- **Function name:** `formatDateLocal`
-- **Purpose:** Format dates using local timezone instead of UTC
-- **Implementation:**
-  ```typescript
-  const formatDateLocal = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  ```
-- **Why this works:** Uses `getFullYear()`, `getMonth()`, and `getDate()` which operate in local timezone
+#### 2. Added Welcome Message
+- **Feature:** Displays "Welcome, <username>" in the header
+- **Location:** Right side of navigation bar
+- **Conditional:** Only shows when user is authenticated
+- **Styling:** Gray text with bold username
 
-#### 3. Fixed Date Initialization
-- **File:** `frontend/src/pages/AddEmission.tsx`
-- **Change:**
-  - Added `formatDateLocal` helper function before the component
-  - Replaced `new Date().toISOString().split('T')[0]` with `formatDateLocal(new Date())`
-  - Updated comment to clarify local timezone usage
-- **Impact:** Default date in form now uses user's local timezone
+#### 3. Added Logout Button
+- **Feature:** Red logout button in the header
+- **Functionality:** Calls `logout()` from AuthContext
+- **Styling:**
+  - Red background (#dc3545)
+  - White text
+  - Hover effect (darker red)
+  - Rounded corners
+  - Proper padding and sizing
+- **Location:** Next to welcome message in header
+
+#### 4. Improved Navigation
+- **Conditional links:**
+  - When authenticated: Shows Dashboard and Add Emission links
+  - When not authenticated: Shows Login and Register links
+- **Always visible:** Home link
+- **Better styling:** Improved spacing, colors, and layout
+
+#### 5. Enhanced Header Styling
+- **Layout:** Flexbox with space-between for proper alignment
+- **Styling:**
+  - Background color (#f8f9fa)
+  - Border bottom for separation
+  - Max width container (1200px)
+  - Better spacing and padding
+- **Responsive:** Flex layout adapts to screen size
 
 ### Files Modified:
-1. `frontend/src/pages/AddEmission.tsx` - Fixed default date initialization
+1. `frontend/src/components/Layout.tsx` - Complete rewrite with authentication-aware navigation
 
 ### Key Implementation Details:
 
-**Why `toISOString()` was problematic:**
-- `toISOString()` always returns UTC time
-- For users behind UTC, a local date like "Dec 8, 11 PM" becomes "Dec 9, 4 AM UTC"
-- Splitting by 'T' and taking [0] gives "Dec 9" instead of "Dec 8"
+**Authentication State:**
+- Uses `useAuth()` hook to get `user`, `logout`, and `isAuthenticated`
+- Conditionally renders UI based on authentication status
 
-**Why `formatDateLocal()` works:**
-- Uses local timezone methods: `getFullYear()`, `getMonth()`, `getDate()`
-- These methods return values based on user's system timezone
-- No UTC conversion happens, so dates match user expectations
+**Logout Functionality:**
+- Calls `logout()` from AuthContext which:
+  - Removes user from localStorage
+  - Clears user state
+  - Navigates to login page
 
-**Date formatting:**
-- `getMonth()` returns 0-11, so we add 1
-- `padStart(2, '0')` ensures two-digit format (e.g., "01" instead of "1")
-- Result is always YYYY-MM-DD format compatible with HTML date inputs
+**User Display:**
+- Shows username from `user.username`
+- Displays "Welcome, <username>" when logged in
+- Shows "Not logged in" when not authenticated
 
-### Testing:
-1. Test in different timezones (especially behind UTC like UTC-5, UTC-8)
-2. Verify default date in Add Emission form shows today's date in local timezone
-3. Test edge cases:
-   - Late evening (11 PM) in timezone behind UTC
-   - Early morning (1 AM) in timezone ahead of UTC
-   - Date boundaries (end of month, beginning of month)
+**Navigation Logic:**
+- Authenticated users see: Home, Dashboard, Add Emission
+- Non-authenticated users see: Home, Login, Register
+- All users see the welcome/logout section (with appropriate content)
 
-### How to Replicate:
-1. Identify uses of `toISOString().split('T')[0]` for date formatting
-2. Create `formatDateLocal` helper function using local timezone methods
-3. Replace all instances with `formatDateLocal(date)`
-4. Test in different timezones to verify correctness
+### How to Test:
+1. Log in to the application
+2. Verify welcome message appears with your username
+3. Verify logout button appears in header
+4. Click logout button
+5. Verify you're redirected to login page
+6. Verify welcome message and logout button disappear
+7. Verify navigation shows Login/Register links instead of Dashboard/Add Emission
 
+### User Experience Improvements:
+- Users can now easily see who they're logged in as
+- Clear logout functionality available at all times
+- Navigation adapts based on authentication status
+- Better visual hierarchy and organization in header
