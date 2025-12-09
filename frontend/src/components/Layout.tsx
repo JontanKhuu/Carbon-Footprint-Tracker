@@ -57,35 +57,30 @@ function Layout() {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '15px'
+            gap: '20px'
           }}>
             {isAuthenticated && user ? (
-              <>
-                <span style={{ color: '#666', fontSize: '14px' }}>
-                  Welcome, <strong style={{ color: '#333' }}>{user.username}</strong>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#c82333';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dc3545';
-                  }}
-                >
-                  Logout
-                </button>
-              </>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#c82333';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc3545';
+                }}
+              >
+                Logout
+              </button>
             ) : (
               <span style={{ color: '#666', fontSize: '14px' }}>
                 Not logged in

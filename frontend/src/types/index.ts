@@ -38,10 +38,23 @@ export interface CreateEmissionRequest {
   activity: string;
   amount: number;
   unit: string;
-  co2_equivalent: number;
-  emission_factor: number;
+  co2_equivalent?: number; // Optional - will be calculated if not provided
+  emission_factor?: number; // Optional - will be calculated if not provided
   date: string;
   description?: string;
+}
+
+// Activities and emission factors response type
+export interface ActivitiesResponse {
+  [category: string]: {
+    activities: string[];
+    emission_factors: {
+      [activity: string]: number;
+    };
+    expected_units: {
+      [activity: string]: string;
+    };
+  };
 }
 
 // Statistics response type

@@ -3,6 +3,14 @@ from app import db
 from app.models.emission import Emission
 from datetime import datetime
 from sqlalchemy import func
+from app.services.emission_calculator import (
+    calculate_co2_equivalent,
+    is_activity_supported,
+    get_supported_activities,
+    get_all_emission_factors,
+    get_expected_unit,
+    EmissionCalculatorError
+)
 
 emissions_bp = Blueprint('emissions', __name__)
 
@@ -30,84 +38,34 @@ def get_emissions():
     return jsonify([emission.to_dict() for emission in emissions]), 200
 
 
-@emissions_bp.route('/<int:emission_id>', methods=['GET'])
-def get_emission(emission_id):
-    """Get a specific emission by ID"""
-    emission = Emission.query.get_or_404(emission_id)
-    return jsonify(emission.to_dict()), 200
-
-
-@emissions_bp.route('', methods=['POST'])
-def create_emission():
-    """Create a new emission record"""
-    data = request.get_json()
+@emissions_bp.route('/activities', methods=['GET'])
+def get_activities():
+    """Get supported activities and their emission factors"""
+    category = request.args.get('category')
     
-    required_fields = ['user_id', 'category', 'activity', 'amount', 'unit', 'co2_equivalent', 'emission_factor', 'date']
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields'}), 400
+    if category:
+        activities = get_supported_activities(category)
+    else:
+        activities = get_supported_activities()
     
-    try:
-        emission = Emission(
-            user_id=data['user_id'],
-            category=data['category'],
-            activity=data['activity'],
-            amount=float(data['amount']),
-            unit=data['unit'],
-            co2_equivalent=float(data['co2_equivalent']),
-            emission_factor=float(data['emission_factor']),
-            date=datetime.fromisoformat(data['date']).date() if isinstance(data['date'], str) else data['date'],
-            description=data.get('description')
-        )
-        
-        db.session.add(emission)
-        db.session.commit()
-        
-        return jsonify(emission.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
-
-
-@emissions_bp.route('/<int:emission_id>', methods=['PUT'])
-def update_emission(emission_id):
-    """Update an existing emission record"""
-    emission = Emission.query.get_or_404(emission_id)
-    data = request.get_json()
+    emission_factors = get_all_emission_factors()
     
-    try:
-        if 'category' in data:
-            emission.category = data['category']
-        if 'activity' in data:
-            emission.activity = data['activity']
-        if 'amount' in data:
-            emission.amount = float(data['amount'])
-        if 'unit' in data:
-            emission.unit = data['unit']
-        if 'co2_equivalent' in data:
-            emission.co2_equivalent = float(data['co2_equivalent'])
-        if 'emission_factor' in data:
-            emission.emission_factor = float(data['emission_factor'])
-        if 'date' in data:
-            emission.date = datetime.fromisoformat(data['date']).date() if isinstance(data['date'], str) else data['date']
-        if 'description' in data:
-            emission.description = data['description']
-        
-        db.session.commit()
-        return jsonify(emission.to_dict()), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
-
-
-@emissions_bp.route('/<int:emission_id>', methods=['DELETE'])
-def delete_emission(emission_id):
-    """Delete an emission record"""
-    emission = Emission.query.get_or_404(emission_id)
+    # Build response with activities, their factors, and expected units
+    response = {}
+    for cat, activity_list in activities.items():
+        response[cat] = {
+            'activities': activity_list,
+            'emission_factors': {
+                activity: emission_factors[cat][activity]
+                for activity in activity_list
+            },
+            'expected_units': {
+                activity: get_expected_unit(cat, activity) or 'kg'
+                for activity in activity_list
+            }
+        }
     
-    db.session.delete(emission)
-    db.session.commit()
-    
-    return jsonify({'message': 'Emission deleted successfully'}), 200
+    return jsonify(response), 200
 
 
 @emissions_bp.route('/stats', methods=['GET'])
@@ -157,4 +115,127 @@ def get_emission_stats():
             for stat in category_stats
         ]
     }), 200
+
+
+@emissions_bp.route('/<int:emission_id>', methods=['GET'])
+def get_emission(emission_id):
+    """Get a specific emission by ID"""
+    emission = Emission.query.get_or_404(emission_id)
+    return jsonify(emission.to_dict()), 200
+
+
+@emissions_bp.route('', methods=['POST'])
+def create_emission():
+    """Create a new emission record"""
+    data = request.get_json()
+    
+    # Required fields (co2_equivalent and emission_factor are now optional)
+    required_fields = ['user_id', 'category', 'activity', 'amount', 'unit', 'date']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields: user_id, category, activity, amount, unit, date'}), 400
+    
+    try:
+        # Extract required fields
+        user_id = data['user_id']
+        category = data['category']
+        activity = data['activity']
+        amount = float(data['amount'])
+        unit = data['unit']
+        date = datetime.fromisoformat(data['date']).date() if isinstance(data['date'], str) else data['date']
+        description = data.get('description')
+        
+        # Validate amount
+        if amount <= 0:
+            return jsonify({'error': 'Amount must be greater than 0'}), 400
+        
+        # Calculate CO2 equivalent if not provided
+        if 'co2_equivalent' in data and 'emission_factor' in data:
+            # Use provided values
+            co2_equivalent = float(data['co2_equivalent'])
+            emission_factor = float(data['emission_factor'])
+            
+            if co2_equivalent < 0:
+                return jsonify({'error': 'CO2 equivalent cannot be negative'}), 400
+            if emission_factor < 0:
+                return jsonify({'error': 'Emission factor cannot be negative'}), 400
+        else:
+            # Try to calculate using the emission calculator
+            try:
+                co2_equivalent, emission_factor = calculate_co2_equivalent(
+                    category=category,
+                    activity=activity,
+                    amount=amount,
+                    unit=unit
+                )
+            except EmissionCalculatorError as e:
+                return jsonify({
+                    'error': str(e),
+                    'message': 'Please provide co2_equivalent and emission_factor manually for this activity.'
+                }), 400
+        
+        # Create emission record
+        emission = Emission(
+            user_id=user_id,
+            category=category,
+            activity=activity,
+            amount=amount,
+            unit=unit,
+            co2_equivalent=co2_equivalent,
+            emission_factor=emission_factor,
+            date=date,
+            description=description
+        )
+        
+        db.session.add(emission)
+        db.session.commit()
+        
+        return jsonify(emission.to_dict()), 201
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'error': f'Invalid value: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@emissions_bp.route('/<int:emission_id>', methods=['PUT'])
+def update_emission(emission_id):
+    """Update an existing emission record"""
+    emission = Emission.query.get_or_404(emission_id)
+    data = request.get_json()
+    
+    try:
+        if 'category' in data:
+            emission.category = data['category']
+        if 'activity' in data:
+            emission.activity = data['activity']
+        if 'amount' in data:
+            emission.amount = float(data['amount'])
+        if 'unit' in data:
+            emission.unit = data['unit']
+        if 'co2_equivalent' in data:
+            emission.co2_equivalent = float(data['co2_equivalent'])
+        if 'emission_factor' in data:
+            emission.emission_factor = float(data['emission_factor'])
+        if 'date' in data:
+            emission.date = datetime.fromisoformat(data['date']).date() if isinstance(data['date'], str) else data['date']
+        if 'description' in data:
+            emission.description = data['description']
+        
+        db.session.commit()
+        return jsonify(emission.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@emissions_bp.route('/<int:emission_id>', methods=['DELETE'])
+def delete_emission(emission_id):
+    """Delete an emission record"""
+    emission = Emission.query.get_or_404(emission_id)
+    
+    db.session.delete(emission)
+    db.session.commit()
+    
+    return jsonify({'message': 'Emission deleted successfully'}), 200
 

@@ -1,92 +1,93 @@
 # Latest Changes Log
 
 ## Date: 2025-12-08
-## Task: Added logout functionality and user welcome message
+## Task: Fixed automatic emission factor calculation issues
 
 ### What I Did:
-Added logout button and welcome message showing the logged-in user's username in the navigation header.
+Fixed issues where CO2 fields were showing as required even for supported activities, and improved the auto-calculation logic to ensure values are always set correctly.
 
 ### Step-by-Step Process:
 
-#### 1. Enhanced Layout Component
-- **File modified:** `frontend/src/components/Layout.tsx`
+#### 1. Fixed Form Validation
+- **File modified:** `frontend/src/pages/AddEmission.tsx`
 - **Changes:**
-  - Imported `useAuth` hook to access user and logout function
-  - Added conditional rendering based on authentication status
-  - Added welcome message showing username when logged in
-  - Added logout button with styling
-  - Updated navigation to show different links for authenticated vs non-authenticated users
-  - Improved header styling with better layout and spacing
+  - Added `noValidate` attribute to form element to disable HTML5 validation
+  - Made `required` attribute conditional: `required={!activitySupported}`
+  - This prevents browser from validating hidden fields
 
-#### 2. Added Welcome Message
-- **Feature:** Displays "Welcome, <username>" in the header
-- **Location:** Right side of navigation bar
-- **Conditional:** Only shows when user is authenticated
-- **Styling:** Gray text with bold username
+#### 2. Improved Conditional Field Rendering
+- **Change:** Updated condition for showing CO2 input fields
+- **New condition:** Fields only show when:
+  - Emission factors have loaded (`!isLoadingFactors && Object.keys(emissionFactors).length > 0`)
+  - Category and activity are selected
+  - Activity is NOT supported (`!activitySupported`)
+- **Result:** Fields are completely hidden (not in DOM) for supported activities
 
-#### 3. Added Logout Button
-- **Feature:** Red logout button in the header
-- **Functionality:** Calls `logout()` from AuthContext
-- **Styling:**
-  - Red background (#dc3545)
-  - White text
-  - Hover effect (darker red)
-  - Rounded corners
-  - Proper padding and sizing
-- **Location:** Next to welcome message in header
+#### 3. Enhanced Auto-Calculation Logic
+- **Change:** Updated useEffect to always calculate CO2 when factor exists
+- **Previous:** Only calculated if `amount > 0`
+- **New:** Calculates even if amount is 0 (shows 0.00)
+- **Benefit:** Values are always set, preventing validation errors
 
-#### 4. Improved Navigation
-- **Conditional links:**
-  - When authenticated: Shows Dashboard and Add Emission links
-  - When not authenticated: Shows Login and Register links
-- **Always visible:** Home link
-- **Better styling:** Improved spacing, colors, and layout
+#### 4. Improved Activity Support Check
+- **Change:** Updated `isActivitySupported()` to check if factors have loaded
+- **Logic:** Returns false if emission factors haven't loaded yet
+- **Result:** Prevents false positives when factors are still loading
 
-#### 5. Enhanced Header Styling
-- **Layout:** Flexbox with space-between for proper alignment
-- **Styling:**
-  - Background color (#f8f9fa)
-  - Border bottom for separation
-  - Max width container (1200px)
-  - Better spacing and padding
-- **Responsive:** Flex layout adapts to screen size
+#### 5. Fixed Value Handling
+- **Change:** Updated input value handling to use `!== undefined` check
+- **Previous:** `value={formData.co2_equivalent || ''}` (0 would show as empty)
+- **New:** `value={formData.co2_equivalent !== undefined ? formData.co2_equivalent : ''}`
+- **Result:** Properly handles 0 values
 
 ### Files Modified:
-1. `frontend/src/components/Layout.tsx` - Complete rewrite with authentication-aware navigation
+1. `frontend/src/pages/AddEmission.tsx` - Fixed validation and conditional rendering
 
-### Key Implementation Details:
+### Key Fixes:
 
-**Authentication State:**
-- Uses `useAuth()` hook to get `user`, `logout`, and `isAuthenticated`
-- Conditionally renders UI based on authentication status
+**HTML5 Validation Issue:**
+- Problem: Browser was validating `required` fields even when hidden
+- Solution: Added `noValidate` to form, made `required` conditional
+- Result: Only custom validation runs, not browser validation
 
-**Logout Functionality:**
-- Calls `logout()` from AuthContext which:
-  - Removes user from localStorage
-  - Clears user state
-  - Navigates to login page
+**Field Visibility Issue:**
+- Problem: Fields might show before emission factors load
+- Solution: Added check for `!isLoadingFactors && Object.keys(emissionFactors).length > 0`
+- Result: Fields only show when truly needed
 
-**User Display:**
-- Shows username from `user.username`
-- Displays "Welcome, <username>" when logged in
-- Shows "Not logged in" when not authenticated
+**Auto-Calculation Issue:**
+- Problem: Values might not be set if amount is 0
+- Solution: Always calculate when factor exists, even if amount is 0
+- Result: Values are always set for supported activities
 
-**Navigation Logic:**
-- Authenticated users see: Home, Dashboard, Add Emission
-- Non-authenticated users see: Home, Login, Register
-- All users see the welcome/logout section (with appropriate content)
+**Value Display Issue:**
+- Problem: 0 values showing as empty string
+- Solution: Use `!== undefined` check instead of `|| ''`
+- Result: 0 values display correctly
 
-### How to Test:
-1. Log in to the application
-2. Verify welcome message appears with your username
-3. Verify logout button appears in header
-4. Click logout button
-5. Verify you're redirected to login page
-6. Verify welcome message and logout button disappear
-7. Verify navigation shows Login/Register links instead of Dashboard/Add Emission
+### Testing:
+1. Test with supported activity:
+   - Select Transport → Car Drive
+   - Enter amount: 100
+   - Verify: CO2 fields are hidden, info box shows calculated values
+   - Submit form
+   - Verify: No validation errors, form submits successfully
 
-### User Experience Improvements:
-- Users can now easily see who they're logged in as
-- Clear logout functionality available at all times
-- Navigation adapts based on authentication status
-- Better visual hierarchy and organization in header
+2. Test with unsupported activity:
+   - Select Other → Other Activity
+   - Verify: CO2 fields are shown
+   - Enter values manually
+   - Submit form
+   - Verify: Form submits with manual values
+
+3. Test edge cases:
+   - Select activity before factors load (fields should not show)
+   - Enter 0 amount (should still calculate, show 0.00)
+   - Change amount multiple times (should recalculate each time)
+
+### How to Replicate:
+1. Add `noValidate` to form element
+2. Make `required` attribute conditional based on activity support
+3. Add checks to ensure fields only render when truly needed
+4. Update auto-calculation to always set values when factor exists
+5. Fix value handling to properly display 0 values

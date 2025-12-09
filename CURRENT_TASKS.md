@@ -143,14 +143,14 @@ You'll know you're ready to move on when:
 ---
 
 ### 8. Create Emission Calculation Service (Backend)
-- [ ] Create `backend/app/services/emission_calculator.py`
-- [ ] Define emission factors for common activities:
+- [✅] Create `backend/app/services/emission_calculator.py`
+- [✅] Define emission factors for common activities:
   - Transport: car (per km), plane (per km), train (per km)
   - Energy: electricity (per kWh), gas (per m³)
   - Food: various food types
-- [ ] Create calculation function that takes activity, amount, unit and returns CO2 equivalent
-- [ ] Update emission creation endpoint to use calculator (make co2_equivalent optional in request)
-- [ ] Add validation for supported activities
+- [✅] Create calculation function that takes activity, amount, unit and returns CO2 equivalent
+- [✅] Update emission creation endpoint to use calculator (make co2_equivalent optional in request)
+- [✅] Add validation for supported activities
 
 **Goal:** Automatically calculate CO2 equivalent instead of requiring manual input.
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { EmissionFilters, CreateEmissionRequest, EmissionStats, User, Emission, RegisterUserRequest, LoginUser } from '../types';
+import type { EmissionFilters, CreateEmissionRequest, EmissionStats, User, Emission, RegisterUserRequest, LoginUser, ActivitiesResponse } from '../types';
 
 // Create an axios instance with a base URL
 const api = axios.create({
@@ -26,4 +26,8 @@ export const getEmissionStats = (params?: EmissionFilters) => api.get<EmissionSt
 export const registerUser = (data: RegisterUserRequest) => api.post<User>('/users', data);
 
 export const loginUser = (data: LoginUser) => api.post<User>('/users/login', data);
+
+// Get supported activities and emission factors
+export const getActivities = (category?: string) => 
+  api.get<ActivitiesResponse>('/emissions/activities', { params: category ? { category } : undefined });
 
