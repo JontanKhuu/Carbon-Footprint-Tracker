@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { createEmission, getActivities } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import type { CreateEmissionRequest, ActivitiesResponse } from '../types';
+import { formatDateLocal } from '../utils/date';
+import type { CreateEmissionRequest } from '../types';
 
 // Category options
 const CATEGORIES = [
@@ -88,14 +89,6 @@ const getCompatibleUnits = (unit: string): string[] => {
     return UNITS.map(u => u.value);
   }
   return UNIT_GROUPS[group] || [];
-};
-
-// Helper function to format date in local timezone as YYYY-MM-DD
-const formatDateLocal = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 };
 
 // Unit conversion factors for emission factors
@@ -302,7 +295,7 @@ function AddEmission() {
         emission_factor: undefined,
       }));
     }
-  }, [formData.category, formData.activity, formData.amount, formData.unit, emissionFactors, manualCO2Edit]);
+  }, [formData.category, formData.activity, formData.amount, formData.unit, emissionFactors, expectedUnits, manualCO2Edit]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -388,9 +381,10 @@ function AddEmission() {
         
         // Recalculate emission factor when CO2 equivalent changes
         // emission_factor = CO2_equivalent / amount
-        if (newData[name] !== undefined && !isNaN(newData[name]) && newData.amount > 0) {
-          newData.emission_factor = newData[name] / newData.amount;
-        } else if (newData[name] === undefined) {
+        const co2Value = newData.co2_equivalent;
+        if (co2Value !== undefined && !isNaN(co2Value) && newData.amount > 0) {
+          newData.emission_factor = co2Value / newData.amount;
+        } else if (co2Value === undefined) {
           newData.emission_factor = undefined;
         }
       } else if (name === 'emission_factor') {
@@ -406,9 +400,10 @@ function AddEmission() {
         setManualCO2Edit(true);
         
         // Recalculate CO2 equivalent when emission factor changes
-        if (newData[name] !== undefined && !isNaN(newData[name]) && newData.amount > 0) {
-          newData.co2_equivalent = newData.amount * newData[name];
-        } else if (newData[name] === undefined) {
+        const factorValue = newData.emission_factor;
+        if (factorValue !== undefined && !isNaN(factorValue) && newData.amount > 0) {
+          newData.co2_equivalent = newData.amount * factorValue;
+        } else if (factorValue === undefined) {
           newData.co2_equivalent = undefined;
         }
       }

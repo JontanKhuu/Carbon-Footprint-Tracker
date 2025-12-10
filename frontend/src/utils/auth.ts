@@ -30,10 +30,3 @@ export const removeAuthUser = (): void => {
   localStorage.removeItem(AUTH_KEY);
 };
 
-/**
- * Check if user is authenticated
- */
-export const isAuthenticated = (): boolean => {
-  return getAuthUser() !== null;
-};
-

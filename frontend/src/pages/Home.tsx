@@ -5,7 +5,7 @@ function Home() {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <div>
+    <div style={{ textAlign: 'center' }}>
       {isAuthenticated && user && (
         <div style={{ marginBottom: '20px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
           <span>Welcome,</span>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from '../services/api';
-import { useNavigate } from 'react-router-dom';
 import type { RegisterUserRequest } from '../types';
 
 function Registration() {
@@ -18,8 +17,7 @@ function Registration() {
                 alert('Passwords do not match. Please try again.');
                 return;
             }
-            const response = await registerUser({ username, email, password } as RegisterUserRequest);
-            console.log('Registration response:', response.data);
+            await registerUser({ username, email, password } as RegisterUserRequest);
             navigate('/login');
         } catch (error) {
             console.error('Registration error:', error);

@@ -1,16 +1,9 @@
-import { useState, useEffect, Fragment } from 'react'
-import { Link } from 'react-router-dom'
-import { getEmissions, getEmissionStats } from '../services/api'
-import { useAuth } from '../hooks/useAuth'
-import type { Emission, EmissionStats } from '../types'
-
-// Helper function to format date in local timezone as YYYY-MM-DD
-const formatDateLocal = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { useState, useEffect, Fragment } from 'react';
+import { Link } from 'react-router-dom';
+import { getEmissions, getEmissionStats } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import { formatDateLocal } from '../utils/date';
+import type { Emission, EmissionStats } from '../types';
 
 function Dashboard() {
   const { user } = useAuth();
@@ -20,6 +13,8 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedEmissionId, setExpandedEmissionId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,6 +89,23 @@ function Dashboard() {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
+  // Pagination calculations
+  const totalPages = Math.ceil(emissions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentEmissions = emissions.slice(startIndex, endIndex);
+
+  // Reset expanded emission when page changes
+  useEffect(() => {
+    setExpandedEmissionId(null);
+  }, [currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
   if (isLoading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -128,8 +140,8 @@ function Dashboard() {
 
   return (
     <>
-      <div style={{justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Carbon Footprint Dashboard</h1>
+      <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+        <h1 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Carbon Footprint Dashboard</h1>
         <Link 
           to="/add-emission" 
           style={{
@@ -298,22 +310,23 @@ function Dashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px' }}>Date</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px' }}>Category</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px' }}>Activity</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }}>Amount</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }}>CO₂ (kg)</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px', color: '#212529' }}>Date</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px', color: '#212529' }}>Category</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px', color: '#212529' }}>Activity</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px', color: '#212529' }}>Amount</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', fontSize: '14px', color: '#212529' }}>CO₂ (kg)</th>
                 </tr>
               </thead>
               <tbody>
-                {emissions.slice(0, 10).map((emission, index) => {
+                {currentEmissions.map((emission, index) => {
                   const isExpanded = expandedEmissionId === emission.id;
+                  const isLastRow = index === currentEmissions.length - 1;
                   return (
                     <Fragment key={emission.id}>
                       <tr 
                         onClick={() => setExpandedEmissionId(isExpanded ? null : emission.id)}
                         style={{ 
-                          borderBottom: isExpanded ? 'none' : (index < Math.min(emissions.length, 10) - 1 ? '1px solid #dee2e6' : 'none'),
+                          borderBottom: isExpanded ? 'none' : (!isLastRow ? '1px solid #dee2e6' : 'none'),
                           backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa',
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
@@ -325,19 +338,19 @@ function Dashboard() {
                           e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f8f9fa';
                         }}
                       >
-                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                        <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {formatDate(emission.date)}
                         </td>
-                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                        <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {capitalize(emission.category)}
                         </td>
-                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                        <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {capitalize(emission.activity.replace(/_/g, ' '))}
                         </td>
-                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#212529' }}>
+                        <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {formatNumber(emission.amount)} {emission.unit}
                         </td>
-                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#28a745' }}>
+                        <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {formatNumber(emission.co2_equivalent)}
                         </td>
                       </tr>
@@ -348,7 +361,7 @@ function Dashboard() {
                             style={{ 
                               padding: '15px 12px', 
                               backgroundColor: '#f8f9fa',
-                              borderBottom: index < Math.min(emissions.length, 10) - 1 ? '1px solid #dee2e6' : 'none'
+                              borderBottom: index < currentEmissions.length - 1 ? '1px solid #dee2e6' : 'none'
                             }}
                           >
                             <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: '#666' }}>
@@ -367,11 +380,50 @@ function Dashboard() {
                 })}
               </tbody>
             </table>
-            {emissions.length > 10 && (
-              <div style={{ padding: '15px', textAlign: 'center', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' }}>
-                <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-                  Showing 10 of {emissions.length} emissions
-                </p>
+            {emissions.length > itemsPerPage && (
+              <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                    Showing {startIndex + 1} to {Math.min(endIndex, emissions.length)} of {emissions.length} emissions
+                  </p>
+                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '14px',
+                        backgroundColor: currentPage === 1 ? '#e9ecef' : '#007bff',
+                        color: currentPage === 1 ? '#6c757d' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Previous
+                    </button>
+                    <span style={{ color: '#666', fontSize: '14px', padding: '0 10px' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '14px',
+                        backgroundColor: currentPage === totalPages ? '#e9ecef' : '#007bff',
+                        color: currentPage === totalPages ? '#6c757d' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -381,4 +433,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard
+export default Dashboard;
