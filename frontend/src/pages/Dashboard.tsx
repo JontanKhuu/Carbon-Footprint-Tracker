@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { getEmissions, getEmissionStats } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
@@ -19,6 +19,7 @@ function Dashboard() {
   const [monthStats, setMonthStats] = useState<EmissionStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedEmissionId, setExpandedEmissionId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -126,8 +127,8 @@ function Dashboard() {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+    <>
+      <div style={{justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1>Carbon Footprint Dashboard</h1>
         <Link 
           to="/add-emission" 
@@ -305,31 +306,65 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {emissions.slice(0, 10).map((emission, index) => (
-                  <tr 
-                    key={emission.id}
-                    style={{ 
-                      borderBottom: index < Math.min(emissions.length, 10) - 1 ? '1px solid #dee2e6' : 'none',
-                      backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa'
-                    }}
-                  >
-                    <td style={{ padding: '12px', fontSize: '14px' }}>
-                      {formatDate(emission.date)}
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '14px' }}>
-                      {capitalize(emission.category)}
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '14px' }}>
-                      {capitalize(emission.activity.replace(/_/g, ' '))}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>
-                      {formatNumber(emission.amount)} {emission.unit}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#28a745' }}>
-                      {formatNumber(emission.co2_equivalent)}
-                    </td>
-                  </tr>
-                ))}
+                {emissions.slice(0, 10).map((emission, index) => {
+                  const isExpanded = expandedEmissionId === emission.id;
+                  return (
+                    <Fragment key={emission.id}>
+                      <tr 
+                        onClick={() => setExpandedEmissionId(isExpanded ? null : emission.id)}
+                        style={{ 
+                          borderBottom: isExpanded ? 'none' : (index < Math.min(emissions.length, 10) - 1 ? '1px solid #dee2e6' : 'none'),
+                          backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#e9ecef';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f8f9fa';
+                        }}
+                      >
+                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                          {formatDate(emission.date)}
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                          {capitalize(emission.category)}
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '14px', color: '#212529' }}>
+                          {capitalize(emission.activity.replace(/_/g, ' '))}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#212529' }}>
+                          {formatNumber(emission.amount)} {emission.unit}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#28a745' }}>
+                          {formatNumber(emission.co2_equivalent)}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${emission.id}-expanded`}>
+                          <td 
+                            colSpan={5} 
+                            style={{ 
+                              padding: '15px 12px', 
+                              backgroundColor: '#f8f9fa',
+                              borderBottom: index < Math.min(emissions.length, 10) - 1 ? '1px solid #dee2e6' : 'none'
+                            }}
+                          >
+                            <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: '#666' }}>
+                              Description:
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.5' }}>
+                              {emission.description || (
+                                <span style={{ fontStyle: 'italic', color: '#999' }}>No description provided</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
             {emissions.length > 10 && (
@@ -342,7 +377,7 @@ function Dashboard() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

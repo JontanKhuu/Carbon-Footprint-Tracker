@@ -9,7 +9,7 @@ function Layout() {
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 20px' }}>
       {/* Header/Navigation that appears on all pages */}
       <header style={{
         backgroundColor: '#f8f9fa',
@@ -22,9 +22,10 @@ function Layout() {
           justifyContent: 'space-between',
           alignItems: 'center',
           maxWidth: '1200px',
-          margin: '0 auto'
+          margin: '0 auto',
+          width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '30px', flex: '0 0 auto' }}>
             <h1 style={{ margin: 0, fontSize: '24px' }}>
               <Link to="/" style={{ textDecoration: 'none', color: '#333' }}>
                 Carbon Footprint Tracker
@@ -57,7 +58,9 @@ function Layout() {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '20px'
+            gap: '20px',
+            flex: '0 0 auto',
+            marginLeft: '30px'
           }}>
             {isAuthenticated && user ? (
               <button
@@ -105,7 +108,7 @@ function Layout() {
         color: '#666',
         fontSize: '14px'
       }}>
-        <p style={{ margin: 0 }}>&copy; 2024 Carbon Footprint Tracker</p>
+        <p style={{ margin: 0 }}>&copy; 2025 Carbon Footprint Tracker</p>
       </footer>
     </div>
   );
