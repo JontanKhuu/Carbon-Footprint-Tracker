@@ -27,12 +27,41 @@ def create_user():
     if not data or not all(k in data for k in ['username', 'email', 'password']):
         return jsonify({'error': 'Missing required fields: username, email, password'}), 400
     
-    # Check if user already exists
-    if User.query.filter_by(username=data['username']).first():
-        return jsonify({'error': 'Username already exists'}), 400
+    # Collect all validation errors
+    errors = {}
     
+    # Check if username already exists
+    if User.query.filter_by(username=data['username']).first():
+        errors['username'] = 'Username already exists'
+    
+    # Check if email already exists
     if User.query.filter_by(email=data['email']).first():
-        return jsonify({'error': 'Email already exists'}), 400
+        errors['email'] = 'Email already exists'
+    
+    # Validate password strength
+    password = data.get('password', '')
+    password_errors = []
+    
+    if len(password) < 8:
+        password_errors.append('Password must be at least 8 characters long')
+    if not any(c.isupper() for c in password):
+        password_errors.append('Password must contain at least one uppercase letter')
+    if not any(c.islower() for c in password):
+        password_errors.append('Password must contain at least one lowercase letter')
+    if not any(c.isdigit() for c in password):
+        password_errors.append('Password must contain at least one number')
+    if not any(not c.isalnum() for c in password):
+        password_errors.append('Password must contain at least one special character')
+    
+    if password_errors:
+        errors['password'] = '. '.join(password_errors)
+    
+    # If there are any errors, return them all
+    if errors:
+        return jsonify({
+            'error': 'Validation failed',
+            'errors': errors
+        }), 400
     
     try:
         user = User(

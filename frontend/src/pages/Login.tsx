@@ -35,35 +35,78 @@ function Login() {
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="usernameOrEmail">Email or Username:</label>
+    <div style={{ textAlign: 'center' }}>
+      <h2 style={{ marginBottom: '1px' }}>Login</h2>
+      <form onSubmit={handleSubmit} style={{ 
+        display: 'inline-block', 
+        textAlign: 'left',
+        maxWidth: '400px',
+        width: '100%',
+        padding: '20px'
+      }}>
+        <div style={{ marginBottom: '15px' }}>
+          <label htmlFor="usernameOrEmail" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            Email or Username:
+          </label>
           <input
             type="text"
             id="usernameOrEmail"
             value={usernameOrEmail}
             onChange={(e) => setUsernameOrEmail(e.target.value)}
             required
+            style={{ 
+              display: 'block', 
+              width: '100%', 
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxSizing: 'border-box'
+            }}
           />
         </div>
-        <div>
-          <label htmlFor="password">Password:</label>
+        <div style={{ marginBottom: '15px' }}>
+          <label htmlFor="password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            Password:
+          </label>
           <input
             type="password"
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            style={{ 
+              display: 'block', 
+              width: '100%', 
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxSizing: 'border-box'
+            }}
           />
         </div>
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
-        </button>
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            style={{
+              padding: '10px 20px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              backgroundColor: isLoading ? '#ccc' : '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
+          </button>
+        </div>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
+      {error && <p style={{ color: 'red', marginTop: '15px' }}>{error}</p>}
+      <p style={{ marginTop: '15px' }}>
         Don't have an account? <Link to="/registration">Sign up</Link>
       </p>
     </div>
