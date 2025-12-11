@@ -17,6 +17,9 @@ export const getUsers = () => api.get<User[]>('/users');
 // Get all emissions
 export const getEmissions = (params?: EmissionFilters) => api.get<Emission[]>('/emissions', { params });
 
+// Get a single emission by ID
+export const getEmission = (emissionId: number) => api.get<Emission>(`/emissions/${emissionId}`);
+
 // Create an emission
 export const createEmission = (data: CreateEmissionRequest) => api.post<Emission>('/emissions', data);
 
@@ -30,4 +33,16 @@ export const loginUser = (data: LoginUser) => api.post<User>('/users/login', dat
 // Get supported activities and emission factors
 export const getActivities = (category?: string) => 
   api.get<ActivitiesResponse>('/emissions/activities', { params: category ? { category } : undefined });
+
+// Update an emission
+export const updateEmission = (emissionId: number, data: Partial<CreateEmissionRequest>) => 
+  api.put<Emission>(`/emissions/${emissionId}`, data);
+
+// Delete an emission
+export const deleteEmission = (emissionId: number) => 
+  api.delete(`/emissions/${emissionId}`);
+
+// Get emission history
+export const getEmissionHistory = (emissionId: number) => 
+  api.get(`/emissions/${emissionId}/history`);
 

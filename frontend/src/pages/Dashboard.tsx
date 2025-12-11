@@ -89,6 +89,16 @@ function Dashboard() {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
+  // Check if emission was edited
+  const isEmissionEdited = (emission: Emission): boolean => {
+    if (!emission.created_at || !emission.updated_at) return false;
+    // Check if updated_at is significantly later than created_at (more than 1 second difference)
+    // This accounts for potential microsecond differences on creation
+    const created = new Date(emission.created_at).getTime();
+    const updated = new Date(emission.updated_at).getTime();
+    return updated - created > 1000; // More than 1 second difference indicates an edit
+  };
+
   // Pagination calculations
   const totalPages = Math.ceil(emissions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -142,21 +152,38 @@ function Dashboard() {
     <>
       <div style={{ marginBottom: '30px', textAlign: 'center' }}>
         <h1 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>Carbon Footprint Dashboard</h1>
-        <Link 
-          to="/add-emission" 
-          style={{
-            display: 'inline-block',
-            padding: '12px 24px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            fontWeight: 'bold',
-            fontSize: '16px'
-          }}
-        >
-          + Add New Emission
-        </Link>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link 
+            to="/add-emission" 
+            style={{
+              display: 'inline-block',
+              padding: '12px 24px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              fontSize: '16px'
+            }}
+          >
+            + Add New Emission
+          </Link>
+          <Link 
+            to="/emissions" 
+            style={{
+              display: 'inline-block',
+              padding: '12px 24px',
+              backgroundColor: '#17a2b8',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              fontSize: '16px'
+            }}
+          >
+            View All Emissions
+          </Link>
+        </div>
       </div>
 
       {/* Total CO2 Equivalent - Prominent Display */}
@@ -339,7 +366,24 @@ function Dashboard() {
                         }}
                       >
                         <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
-                          {formatDate(emission.date)}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {formatDate(emission.date)}
+                            {isEmissionEdited(emission) && (
+                              <span 
+                                style={{
+                                  fontSize: '10px',
+                                  color: '#6c757d',
+                                  backgroundColor: '#e9ecef',
+                                  padding: '2px 6px',
+                                  borderRadius: '3px',
+                                  fontWeight: 'normal'
+                                }}
+                                title="This emission was edited"
+                              >
+                                Edited
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#212529' }}>
                           {capitalize(emission.category)}

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models.emission import Emission
+from app.models.emission_history import EmissionHistory
 from datetime import datetime
 from sqlalchemy import func
 from app.services.emission_calculator import (
@@ -117,9 +118,25 @@ def get_emission_stats():
     }), 200
 
 
+@emissions_bp.route('/<int:emission_id>/history', methods=['GET'])
+def get_emission_history(emission_id):
+    """Get edit history for an emission"""
+    print(f"DEBUG: get_emission_history called with emission_id={emission_id}")
+    # Verify emission exists
+    emission = Emission.query.get_or_404(emission_id)
+    
+    # Get all history entries for this emission, ordered by most recent first
+    history_entries = EmissionHistory.query.filter_by(emission_id=emission_id)\
+        .order_by(EmissionHistory.changed_at.desc()).all()
+    
+    print(f"DEBUG: Found {len(history_entries)} history entries")
+    return jsonify([entry.to_dict() for entry in history_entries]), 200
+
+
 @emissions_bp.route('/<int:emission_id>', methods=['GET'])
 def get_emission(emission_id):
     """Get a specific emission by ID"""
+    print(f"DEBUG: get_emission called with emission_id={emission_id}, path={request.path}")
     emission = Emission.query.get_or_404(emission_id)
     return jsonify(emission.to_dict()), 200
 
@@ -205,6 +222,19 @@ def update_emission(emission_id):
     data = request.get_json()
     
     try:
+        # Store old values for history
+        old_values = {
+            'category': emission.category,
+            'activity': emission.activity,
+            'amount': emission.amount,
+            'unit': emission.unit,
+            'co2_equivalent': emission.co2_equivalent,
+            'emission_factor': emission.emission_factor,
+            'date': emission.date,
+            'description': emission.description
+        }
+        
+        # Update fields
         if 'category' in data:
             emission.category = data['category']
         if 'activity' in data:
@@ -221,6 +251,53 @@ def update_emission(emission_id):
             emission.date = datetime.fromisoformat(data['date']).date() if isinstance(data['date'], str) else data['date']
         if 'description' in data:
             emission.description = data['description']
+        
+        # Store new values
+        new_values = {
+            'category': emission.category,
+            'activity': emission.activity,
+            'amount': emission.amount,
+            'unit': emission.unit,
+            'co2_equivalent': emission.co2_equivalent,
+            'emission_factor': emission.emission_factor,
+            'date': emission.date,
+            'description': emission.description
+        }
+        
+        # Check if there are any actual changes
+        has_changes = (
+            old_values['category'] != new_values['category'] or
+            old_values['activity'] != new_values['activity'] or
+            old_values['amount'] != new_values['amount'] or
+            old_values['unit'] != new_values['unit'] or
+            old_values['co2_equivalent'] != new_values['co2_equivalent'] or
+            old_values['emission_factor'] != new_values['emission_factor'] or
+            old_values['date'] != new_values['date'] or
+            (old_values['description'] or '') != (new_values['description'] or '')
+        )
+        
+        # Only create history entry if there are actual changes
+        if has_changes:
+            history = EmissionHistory(
+                emission_id=emission_id,
+                old_category=old_values['category'],
+                old_activity=old_values['activity'],
+                old_amount=old_values['amount'],
+                old_unit=old_values['unit'],
+                old_co2_equivalent=old_values['co2_equivalent'],
+                old_emission_factor=old_values['emission_factor'],
+                old_date=old_values['date'],
+                old_description=old_values['description'],
+                new_category=new_values['category'],
+                new_activity=new_values['activity'],
+                new_amount=new_values['amount'],
+                new_unit=new_values['unit'],
+                new_co2_equivalent=new_values['co2_equivalent'],
+                new_emission_factor=new_values['emission_factor'],
+                new_date=new_values['date'],
+                new_description=new_values['description']
+            )
+            db.session.add(history)
         
         db.session.commit()
         return jsonify(emission.to_dict()), 200

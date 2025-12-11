@@ -1,93 +1,117 @@
 # Latest Changes Log
 
-## Date: 2025-12-08
-## Task: Fixed automatic emission factor calculation issues
+## Date: 2025-12-08 (Latest)
+## Task: Implemented Emission Edit History Feature
 
 ### What I Did:
-Fixed issues where CO2 fields were showing as required even for supported activities, and improved the auto-calculation logic to ensure values are always set correctly.
+Added a comprehensive edit history tracking system that allows users to view the complete change history of any emission record, showing what fields were changed, when they were changed, and the old vs new values.
 
 ### Step-by-Step Process:
 
-#### 1. Fixed Form Validation
-- **File modified:** `frontend/src/pages/AddEmission.tsx`
+#### 1. Created EmissionHistory Database Model
+- **File created:** `backend/app/models/emission_history.py`
+- **Features:**
+  - Tracks all emission fields (category, activity, amount, unit, CO2 equivalent, emission factor, date, description)
+  - Stores both old and new values for each edit
+  - Records timestamp of each change
+  - Provides `to_dict()` method that returns only the fields that actually changed
+- **Database table:** `emission_history` (requires migration)
+
+#### 2. Updated Emission Update Endpoint
+- **File modified:** `backend/app/routes/emissions.py`
 - **Changes:**
-  - Added `noValidate` attribute to form element to disable HTML5 validation
-  - Made `required` attribute conditional: `required={!activitySupported}`
-  - This prevents browser from validating hidden fields
+  - Modified `update_emission()` function to capture old values before updating
+  - Creates a history entry after each update with both old and new values
+  - History is saved to database automatically on every edit
+- **Import:** Added `EmissionHistory` import
 
-#### 2. Improved Conditional Field Rendering
-- **Change:** Updated condition for showing CO2 input fields
-- **New condition:** Fields only show when:
-  - Emission factors have loaded (`!isLoadingFactors && Object.keys(emissionFactors).length > 0`)
-  - Category and activity are selected
-  - Activity is NOT supported (`!activitySupported`)
-- **Result:** Fields are completely hidden (not in DOM) for supported activities
+#### 3. Created History API Endpoint
+- **File modified:** `backend/app/routes/emissions.py`
+- **New endpoint:** `GET /emissions/<id>/history`
+- **Functionality:**
+  - Returns all edit history entries for a specific emission
+  - Ordered by most recent first
+  - Each entry shows only the fields that changed
+  - Includes timestamp of each change
 
-#### 3. Enhanced Auto-Calculation Logic
-- **Change:** Updated useEffect to always calculate CO2 when factor exists
-- **Previous:** Only calculated if `amount > 0`
-- **New:** Calculates even if amount is 0 (shows 0.00)
-- **Benefit:** Values are always set, preventing validation errors
+#### 4. Added Frontend API Function
+- **File modified:** `frontend/src/services/api.ts`
+- **Added:** `getEmissionHistory(emissionId)` function
+- **Returns:** Array of history entries with change details
 
-#### 4. Improved Activity Support Check
-- **Change:** Updated `isActivitySupported()` to check if factors have loaded
-- **Logic:** Returns false if emission factors haven't loaded yet
-- **Result:** Prevents false positives when factors are still loading
+#### 5. Added TypeScript Types
+- **File modified:** `frontend/src/types/index.ts`
+- **New types:**
+  - `EmissionHistoryEntry` - Represents a single history entry
+  - `EmissionHistoryChange` - Represents a single field change within an entry
 
-#### 5. Fixed Value Handling
-- **Change:** Updated input value handling to use `!== undefined` check
-- **Previous:** `value={formData.co2_equivalent || ''}` (0 would show as empty)
-- **New:** `value={formData.co2_equivalent !== undefined ? formData.co2_equivalent : ''}`
-- **Result:** Properly handles 0 values
+#### 6. Added History Button and Modal to EmissionsList
+- **File modified:** `frontend/src/pages/EmissionsList.tsx`
+- **Features:**
+  - "History" button in Actions column (between Edit and Delete)
+  - Modal dialog that displays complete edit history
+  - Shows date/time of each edit
+  - Color-coded changes: red for old values, green for new values
+  - Displays only fields that actually changed
+  - Empty state when no history exists
+  - Loading state while fetching history
+- **State management:**
+  - `emissionHistoryId` - Tracks which emission's history is being viewed
+  - `history` - Stores the history entries
+  - `isLoadingHistory` - Loading state for history fetch
 
 ### Files Modified:
-1. `frontend/src/pages/AddEmission.tsx` - Fixed validation and conditional rendering
+1. `backend/app/models/emission_history.py` - New model (created)
+2. `backend/app/models/__init__.py` - Added EmissionHistory export
+3. `backend/app/routes/emissions.py` - Added history tracking and API endpoint
+4. `frontend/src/services/api.ts` - Added getEmissionHistory function
+5. `frontend/src/types/index.ts` - Added history type definitions
+6. `frontend/src/pages/EmissionsList.tsx` - Added History button and modal
 
-### Key Fixes:
+### Key Features:
 
-**HTML5 Validation Issue:**
-- Problem: Browser was validating `required` fields even when hidden
-- Solution: Added `noValidate` to form, made `required` conditional
-- Result: Only custom validation runs, not browser validation
+**Backend History Tracking:**
+- Automatically tracks all changes when an emission is updated
+- Stores complete before/after state for all fields
+- Only returns fields that actually changed in API response
+- Timestamps all changes for audit trail
 
-**Field Visibility Issue:**
-- Problem: Fields might show before emission factors load
-- Solution: Added check for `!isLoadingFactors && Object.keys(emissionFactors).length > 0`
-- Result: Fields only show when truly needed
+**Frontend History Display:**
+- Easy access via "History" button in emissions list
+- Modal shows complete edit timeline
+- Visual distinction between old (red) and new (green) values
+- Field names are human-readable (underscores replaced with spaces, capitalized)
+- Date and time displayed for each edit
+- Handles empty history gracefully
 
-**Auto-Calculation Issue:**
-- Problem: Values might not be set if amount is 0
-- Solution: Always calculate when factor exists, even if amount is 0
-- Result: Values are always set for supported activities
+**User Experience:**
+- History button styled consistently with Edit/Delete buttons
+- Modal is scrollable for long history lists
+- Clear visual hierarchy showing what changed and when
+- Easy to close and return to emissions list
 
-**Value Display Issue:**
-- Problem: 0 values showing as empty string
-- Solution: Use `!== undefined` check instead of `|| ''`
-- Result: 0 values display correctly
+### Database Migration Required:
+To enable this feature, you need to create and run a database migration:
+
+```bash
+docker-compose exec backend flask db migrate -m "Add emission history table"
+docker-compose exec backend flask db upgrade
+```
+
+This will create the `emission_history` table in your database.
 
 ### Testing:
-1. Test with supported activity:
-   - Select Transport → Car Drive
-   - Enter amount: 100
-   - Verify: CO2 fields are hidden, info box shows calculated values
-   - Submit form
-   - Verify: No validation errors, form submits successfully
+1. Edit an emission and verify history is created
+2. Click "History" button on an emission with edits
+3. Verify modal shows all changes with correct old/new values
+4. Verify timestamps are displayed correctly
+5. Test with emissions that have no history (should show empty state)
+6. Test with emissions that have multiple edits (should show all in chronological order)
 
-2. Test with unsupported activity:
-   - Select Other → Other Activity
-   - Verify: CO2 fields are shown
-   - Enter values manually
-   - Submit form
-   - Verify: Form submits with manual values
-
-3. Test edge cases:
-   - Select activity before factors load (fields should not show)
-   - Enter 0 amount (should still calculate, show 0.00)
-   - Change amount multiple times (should recalculate each time)
-
-### How to Replicate:
-1. Add `noValidate` to form element
-2. Make `required` attribute conditional based on activity support
-3. Add checks to ensure fields only render when truly needed
-4. Update auto-calculation to always set values when factor exists
-5. Fix value handling to properly display 0 values
+### How It Works:
+1. When a user edits an emission, the backend captures the old values
+2. After updating, it creates a history entry with both old and new values
+3. The history entry is saved to the database
+4. When user clicks "History" button, frontend fetches all history entries
+5. Modal displays each entry showing only the fields that changed
+6. Changes are color-coded for easy visual comparison

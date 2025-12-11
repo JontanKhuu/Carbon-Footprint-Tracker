@@ -32,7 +32,9 @@ def create_app(config_name='default'):
     app.register_blueprint(emissions_bp, url_prefix='/api/emissions')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     
-    # Create database tables
+    # Create database tables if they don't exist
+    # db.create_all() with checkfirst=True (default) is safe - it only creates
+    # tables that don't exist and does NOT drop existing tables or data
     with app.app_context():
         db.create_all()
     

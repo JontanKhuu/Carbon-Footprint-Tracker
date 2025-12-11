@@ -43,6 +43,7 @@ function Layout() {
               {isAuthenticated ? (
                 <>
                   <li><Link to="/dashboard" style={{ textDecoration: 'none', color: '#007bff' }}>Dashboard</Link></li>
+                  <li><Link to="/emissions" style={{ textDecoration: 'none', color: '#007bff' }}>Emissions</Link></li>
                   <li><Link to="/add-emission" style={{ textDecoration: 'none', color: '#007bff' }}>Add Emission</Link></li>
                 </>
               ) : (

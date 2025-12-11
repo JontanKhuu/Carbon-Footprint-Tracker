@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Registration from './pages/Registration';
 import AddEmission from './pages/AddEmission';
+import EmissionsList from './pages/EmissionsList';
 import ProtectedRoute from './components/ProtectedRoute';
 
 
@@ -31,6 +32,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AddEmission />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="emissions" 
+              element={
+                <ProtectedRoute>
+                  <EmissionsList />
                 </ProtectedRoute>
               } 
             />

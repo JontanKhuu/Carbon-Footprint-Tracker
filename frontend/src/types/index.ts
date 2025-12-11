@@ -78,3 +78,17 @@ export interface LoginUser {
   usernameOrEmail: string,
   password: string,
 }
+
+// Emission history types
+export interface EmissionHistoryChange {
+  field: string;
+  old_value: any;
+  new_value: any;
+}
+
+export interface EmissionHistoryEntry {
+  id: number;
+  emission_id: number;
+  changed_at: string;
+  changes: EmissionHistoryChange[];
+}

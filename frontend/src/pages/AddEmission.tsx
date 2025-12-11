@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { createEmission, getActivities } from '../services/api';
+import { createEmission, updateEmission, getEmission, getActivities } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { formatDateLocal } from '../utils/date';
 import type { CreateEmissionRequest } from '../types';
@@ -147,7 +147,11 @@ const convertEmissionFactor = (factor: number, fromUnit: string, toUnit: string)
 
 function AddEmission() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const editId = searchParams.get('edit');
+  const isEditMode = !!editId;
+  
   const [formData, setFormData] = useState<CreateEmissionRequest>({
     user_id: user?.id || 0,
     category: '',
@@ -160,6 +164,7 @@ function AddEmission() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingEmission, setIsLoadingEmission] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [emissionFactors, setEmissionFactors] = useState<Record<string, Record<string, number>>>({});
   const [expectedUnits, setExpectedUnits] = useState<Record<string, Record<string, string>>>({});
@@ -193,6 +198,39 @@ function AddEmission() {
 
     fetchEmissionFactors();
   }, []);
+
+  // Fetch emission data if in edit mode
+  useEffect(() => {
+    const fetchEmissionData = async () => {
+      if (!isEditMode || !editId) return;
+
+      try {
+        setIsLoadingEmission(true);
+        const response = await getEmission(parseInt(editId));
+        const emission = response.data;
+
+        // Pre-fill form with emission data
+        setFormData({
+          user_id: emission.user_id,
+          category: emission.category,
+          activity: emission.activity,
+          amount: emission.amount,
+          unit: emission.unit,
+          date: emission.date,
+          description: emission.description || '',
+          co2_equivalent: emission.co2_equivalent,
+          emission_factor: emission.emission_factor,
+        });
+      } catch (err) {
+        console.error('Error fetching emission:', err);
+        setSubmitError('Failed to load emission data. Please try again.');
+      } finally {
+        setIsLoadingEmission(false);
+      }
+    };
+
+    fetchEmissionData();
+  }, [isEditMode, editId]);
 
   // Get available activities for selected category
   const availableActivities = formData.category ? ACTIVITIES[formData.category] || [] : [];
@@ -463,7 +501,7 @@ function AddEmission() {
     }
 
     if (!user?.id) {
-      newErrors.user = 'You must be logged in to add emissions';
+      newErrors.user = `You must be logged in to ${isEditMode ? 'edit' : 'add'} emissions`;
     }
 
     setErrors(newErrors);
@@ -480,7 +518,7 @@ function AddEmission() {
     }
 
     if (!user?.id) {
-      setSubmitError('You must be logged in to add emissions');
+      setSubmitError(`You must be logged in to ${isEditMode ? 'edit' : 'add'} emissions`);
       return;
     }
 
@@ -505,16 +543,22 @@ function AddEmission() {
         emissionData.emission_factor = formData.emission_factor;
       }
 
-      await createEmission(emissionData);
+      if (isEditMode && editId) {
+        // Update existing emission
+        await updateEmission(parseInt(editId), emissionData);
+      } else {
+        // Create new emission
+        await createEmission(emissionData);
+      }
       
-      // Success - redirect to dashboard
-      navigate('/dashboard');
+      // Success - redirect to emissions list if editing, otherwise dashboard
+      navigate(isEditMode ? '/emissions' : '/dashboard');
     } catch (err) {
-      console.error('Error creating emission:', err);
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} emission:`, err);
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         setSubmitError(err.response.data.error);
       } else {
-        setSubmitError('Failed to create emission. Please try again.');
+        setSubmitError(`Failed to ${isEditMode ? 'update' : 'create'} emission. Please try again.`);
       }
     } finally {
       setIsLoading(false);
@@ -525,9 +569,17 @@ function AddEmission() {
   const activitySupported = isActivitySupported();
   const currentFactor = getCurrentEmissionFactor();
 
+  if (isLoadingEmission) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+        <p>Loading emission data...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h2>Add New Emission</h2>
+      <h2>{isEditMode ? 'Edit Emission' : 'Add New Emission'}</h2>
       
       <form onSubmit={handleSubmit} noValidate>
         {/* Category */}
@@ -820,11 +872,11 @@ function AddEmission() {
               cursor: isLoading || isLoadingFactors ? 'not-allowed' : 'pointer',
             }}
           >
-            {isLoading ? 'Submitting...' : 'Add Emission'}
+            {isLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Emission' : 'Add Emission')}
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(isEditMode ? '/emissions' : '/dashboard')}
             style={{
               padding: '12px 20px',
               fontSize: '16px',
