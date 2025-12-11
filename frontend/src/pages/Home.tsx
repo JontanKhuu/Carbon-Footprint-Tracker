@@ -16,9 +16,30 @@ function Home() {
       <p>Track and monitor your carbon emissions to reduce your environmental impact.</p>
       
       <div>
-        <h3>Get Started</h3>
-        <p>Start tracking your carbon footprint today!</p>
-        <Link to="/login">Login</Link> or <Link to="/registration">Register</Link> or <Link to="/dashboard">View Dashboard</Link>
+        {isAuthenticated ? (
+          <>
+            <h3>Continue Tracking</h3>
+            <p>Manage your carbon footprint and view your progress.</p>
+            <Link to="/dashboard" style={{ 
+              display: 'inline-block',
+              marginTop: '10px',
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              fontWeight: 'bold'
+            }}>
+              Go to Dashboard
+            </Link>
+          </>
+        ) : (
+          <>
+            <h3>Get Started</h3>
+            <p>Start tracking your carbon footprint today!</p>
+            <Link to="/login">Login</Link> or <Link to="/registration">Register</Link>
+          </>
+        )}
       </div>
     </div>
   );

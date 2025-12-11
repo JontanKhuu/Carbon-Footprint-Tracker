@@ -26,7 +26,7 @@ def test_create_user(client):
     user_data = {
         'username': 'newuser',
         'email': 'newuser@example.com',
-        'password': 'securepass123'
+        'password': 'SecurePass123!'
     }
     
     response = client.post('/api/users', json=user_data)
