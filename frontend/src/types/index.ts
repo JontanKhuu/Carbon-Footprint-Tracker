@@ -98,8 +98,8 @@ export interface RefreshTokenResponse {
 // Emission history types
 export interface EmissionHistoryChange {
   field: string;
-  old_value: any;
-  new_value: any;
+  old_value: unknown;
+  new_value: unknown;
 }
 
 export interface EmissionHistoryEntry {

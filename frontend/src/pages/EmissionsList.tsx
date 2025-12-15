@@ -2,7 +2,6 @@ import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { getEmissions, deleteEmission, getEmissionHistory } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { formatDateLocal } from '../utils/date';
 import type { Emission, EmissionFilters, EmissionHistoryEntry } from '../types';
 
 type SortField = 'date' | 'amount' | 'co2_equivalent';
@@ -696,7 +695,7 @@ function EmissionsList() {
               <p style={{ color: '#212529' }}>No edit history available for this emission.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {history.map((entry, index) => (
+                {history.map((entry) => (
                   <div key={entry.id} style={{
                     border: '1px solid #dee2e6',
                     borderRadius: '4px',
