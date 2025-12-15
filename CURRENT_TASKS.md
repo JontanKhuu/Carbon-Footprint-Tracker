@@ -157,15 +157,15 @@ You'll know you're ready to move on when:
 ---
 
 ### 9. Create Emissions List Page
-- [ ] Create EmissionsList page component
-- [ ] Display emissions in a table or card layout
-- [ ] Add filtering options:
+- [✅] Create EmissionsList page component
+- [✅] Display emissions in a table or card layout
+- [✅] Add filtering options:
   - By category
   - By date range
-- [ ] Add sorting (by date, by amount, by CO2 equivalent)
-- [ ] Add edit functionality (link to edit form)
-- [ ] Add delete functionality with confirmation
-- [ ] Show loading state while fetching
+- [✅] Add sorting (by date, by amount, by CO2 equivalent)
+- [✅] Add edit functionality (link to edit form)
+- [✅] Add delete functionality with confirmation
+- [✅] Show loading state while fetching
 
 **Goal:** Users can view, filter, and manage their emissions.
 
@@ -194,4 +194,116 @@ You'll know you're ready to move on when:
 
 **Last Updated:** Today
 **Current Phase:** Core Emission Tracking Features
+
+---
+
+## 🔧 Remaining Items from Phases 1-4 (Before Phase 5)
+
+### Phase 1: Backend Enhancements
+
+#### 10. Implement JWT Authentication & Protected Routes
+- [✅] Add JWT token generation on login
+- [✅] Create authentication middleware for backend routes
+- [✅] Protect API endpoints (require authentication for emissions CRUD)
+- [✅] Update frontend to send JWT tokens with requests
+- [✅] Add token refresh mechanism
+- [✅] Handle token expiration gracefully
+
+**Goal:** Secure API endpoints and implement proper authentication flow.
+
+**Status:** ✅ COMPLETE - All emissions endpoints are now protected with JWT authentication. Tokens are automatically managed in the frontend with refresh capability.
+
+---
+
+#### 11. Add API Documentation
+- [ ] Install Swagger/OpenAPI (Flask-RESTX or Flask-Swagger-UI)
+- [ ] Document all API endpoints
+- [ ] Add request/response schemas
+- [ ] Include example requests/responses
+- [ ] Make documentation accessible at `/api/docs`
+
+**Goal:** Provide clear API documentation for developers and future reference.
+
+---
+
+### Phase 3: Statistics & Analytics Enhancements
+
+#### 12. Add Data Visualization Charts
+- [ ] Install charting library (Chart.js, Recharts, or similar)
+- [ ] Create emissions over time line chart
+  - Show daily/weekly/monthly trends
+  - Allow date range selection
+- [ ] Create emissions by category pie/bar chart
+- [ ] Add chart filtering options (by date range, category)
+- [ ] Make charts interactive (hover details, click to filter)
+
+**Goal:** Visualize emission trends and patterns over time.
+
+---
+
+#### 13. Add Comparison Features
+- [ ] Implement month-over-month comparison
+  - Calculate previous month's total
+  - Show percentage change
+  - Display trend indicator (↑/↓)
+- [ ] Implement year-over-year comparison
+  - Calculate same month previous year
+  - Show percentage change
+  - Display trend indicator
+- [ ] Add comparison cards/widgets to Dashboard
+- [ ] Create comparison view page (optional)
+
+**Goal:** Help users track their progress and see improvements over time.
+
+---
+
+### Phase 4: Backend Services
+
+#### 14. Add Rate Limiting
+- [ ] Install Flask-Limiter or similar
+- [ ] Configure rate limits for API endpoints
+  - Login/Registration: stricter limits (e.g., 5 per minute)
+  - General API: moderate limits (e.g., 100 per hour)
+- [ ] Add rate limit headers to responses
+- [ ] Handle rate limit exceeded errors gracefully
+- [ ] Test rate limiting behavior
+
+**Goal:** Protect API from abuse and ensure fair usage.
+
+---
+
+#### 15. Add Export Functionality
+- [ ] Create export endpoint: `GET /api/emissions/export`
+- [ ] Support CSV export format
+  - Include all emission fields
+  - Format dates properly
+  - Handle special characters
+- [ ] Support JSON export format
+  - Pretty-print JSON
+  - Include metadata (export date, user info)
+- [ ] Add export button to EmissionsList page
+- [ ] Allow filtering before export (use same filters as list view)
+- [ ] Add download functionality in frontend
+
+**Goal:** Allow users to download their emission data for backup or analysis.
+
+---
+
+## 📋 Priority Order for Remaining Items
+
+**High Priority:**
+1. Implement JWT Authentication & Protected Routes (Security)
+2. Add Export Functionality (User data portability)
+
+**Medium Priority:**
+3. Add Data Visualization Charts (Better insights)
+4. Add Comparison Features (Progress tracking)
+5. Add Rate Limiting (API protection)
+
+**Low Priority:**
+6. Add API Documentation (Developer experience)
+
+---
+
+**Total Estimated Time:** ~15-20 hours for all items
 

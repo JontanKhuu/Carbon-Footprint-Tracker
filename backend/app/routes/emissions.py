@@ -12,22 +12,23 @@ from app.services.emission_calculator import (
     get_expected_unit,
     EmissionCalculatorError
 )
+from app.utils.jwt import token_required
 
 emissions_bp = Blueprint('emissions', __name__)
 
 
 @emissions_bp.route('', methods=['GET'])
-def get_emissions():
-    """Get all emissions with optional filtering"""
-    user_id = request.args.get('user_id', type=int)
+@token_required
+def get_emissions(current_user):
+    """Get all emissions with optional filtering (requires authentication)"""
+    # Use current_user's ID instead of user_id from query params for security
+    user_id = current_user.id
     category = request.args.get('category')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     
-    query = Emission.query
+    query = Emission.query.filter_by(user_id=user_id)
     
-    if user_id:
-        query = query.filter_by(user_id=user_id)
     if category:
         query = query.filter_by(category=category)
     if start_date:
@@ -70,16 +71,16 @@ def get_activities():
 
 
 @emissions_bp.route('/stats', methods=['GET'])
-def get_emission_stats():
-    """Get emission statistics"""
-    user_id = request.args.get('user_id', type=int)
+@token_required
+def get_emission_stats(current_user):
+    """Get emission statistics (requires authentication)"""
+    # Use current_user's ID for security
+    user_id = current_user.id
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     
-    query = Emission.query
+    query = Emission.query.filter_by(user_id=user_id)
     
-    if user_id:
-        query = query.filter_by(user_id=user_id)
     if start_date:
         query = query.filter(Emission.date >= datetime.fromisoformat(start_date).date())
     if end_date:
@@ -93,10 +94,8 @@ def get_emission_stats():
         Emission.category,
         func.sum(Emission.co2_equivalent).label('total_co2'),
         func.count(Emission.id).label('count')
-    ).group_by(Emission.category)
+    ).filter_by(user_id=user_id).group_by(Emission.category)
     
-    if user_id:
-        category_stats = category_stats.filter_by(user_id=user_id)
     if start_date:
         category_stats = category_stats.filter(Emission.date >= datetime.fromisoformat(start_date).date())
     if end_date:
@@ -119,41 +118,49 @@ def get_emission_stats():
 
 
 @emissions_bp.route('/<int:emission_id>/history', methods=['GET'])
-def get_emission_history(emission_id):
-    """Get edit history for an emission"""
-    print(f"DEBUG: get_emission_history called with emission_id={emission_id}")
-    # Verify emission exists
+@token_required
+def get_emission_history(emission_id, current_user):
+    """Get edit history for an emission (requires authentication)"""
+    # Verify emission exists and belongs to current user
     emission = Emission.query.get_or_404(emission_id)
+    
+    if emission.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
     
     # Get all history entries for this emission, ordered by most recent first
     history_entries = EmissionHistory.query.filter_by(emission_id=emission_id)\
         .order_by(EmissionHistory.changed_at.desc()).all()
     
-    print(f"DEBUG: Found {len(history_entries)} history entries")
     return jsonify([entry.to_dict() for entry in history_entries]), 200
 
 
 @emissions_bp.route('/<int:emission_id>', methods=['GET'])
-def get_emission(emission_id):
-    """Get a specific emission by ID"""
-    print(f"DEBUG: get_emission called with emission_id={emission_id}, path={request.path}")
+@token_required
+def get_emission(emission_id, current_user):
+    """Get a specific emission by ID (requires authentication)"""
     emission = Emission.query.get_or_404(emission_id)
+    
+    # Verify emission belongs to current user
+    if emission.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     return jsonify(emission.to_dict()), 200
 
 
 @emissions_bp.route('', methods=['POST'])
-def create_emission():
-    """Create a new emission record"""
+@token_required
+def create_emission(current_user):
+    """Create a new emission record (requires authentication)"""
     data = request.get_json()
     
-    # Required fields (co2_equivalent and emission_factor are now optional)
-    required_fields = ['user_id', 'category', 'activity', 'amount', 'unit', 'date']
+    # Required fields (user_id is now taken from token, co2_equivalent and emission_factor are optional)
+    required_fields = ['category', 'activity', 'amount', 'unit', 'date']
     if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields: user_id, category, activity, amount, unit, date'}), 400
+        return jsonify({'error': 'Missing required fields: category, activity, amount, unit, date'}), 400
     
     try:
-        # Extract required fields
-        user_id = data['user_id']
+        # Use current_user's ID instead of user_id from request for security
+        user_id = current_user.id
         category = data['category']
         activity = data['activity']
         amount = float(data['amount'])
@@ -216,9 +223,15 @@ def create_emission():
 
 
 @emissions_bp.route('/<int:emission_id>', methods=['PUT'])
-def update_emission(emission_id):
-    """Update an existing emission record"""
+@token_required
+def update_emission(emission_id, current_user):
+    """Update an existing emission record (requires authentication)"""
     emission = Emission.query.get_or_404(emission_id)
+    
+    # Verify emission belongs to current user
+    if emission.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     data = request.get_json()
     
     try:
@@ -307,9 +320,14 @@ def update_emission(emission_id):
 
 
 @emissions_bp.route('/<int:emission_id>', methods=['DELETE'])
-def delete_emission(emission_id):
-    """Delete an emission record"""
+@token_required
+def delete_emission(emission_id, current_user):
+    """Delete an emission record (requires authentication)"""
     emission = Emission.query.get_or_404(emission_id)
+    
+    # Verify emission belongs to current user
+    if emission.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
     
     db.session.delete(emission)
     db.session.commit()

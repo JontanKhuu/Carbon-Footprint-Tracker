@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models.user import User
+from app.utils.jwt import generate_token, verify_token, token_required
 
 users_bp = Blueprint('users', __name__)
 
@@ -118,7 +119,7 @@ def delete_user(user_id):
 
 @users_bp.route('/login', methods=['POST'])
 def login():
-    """Login a user"""
+    """Login a user and return JWT tokens"""
     data = request.get_json()
     
     # Check if usernameOrEmail and password are provided
@@ -137,5 +138,56 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid credentials'}), 401
     
-    # Return user data (in a real app, you'd return a JWT token here)
-    return jsonify(user.to_dict()), 200
+    # Generate JWT tokens
+    tokens = generate_token(user.id, user.username, user.email)
+    
+    # Return user data and tokens
+    return jsonify({
+        'user': user.to_dict(),
+        **tokens
+    }), 200
+
+
+@users_bp.route('/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh access token using refresh token"""
+    data = request.get_json()
+    
+    if not data or 'refresh_token' not in data:
+        return jsonify({'error': 'Refresh token required'}), 400
+    
+    refresh_token_str = data['refresh_token']
+    
+    try:
+        # Verify refresh token
+        payload = verify_token(refresh_token_str, token_type='refresh')
+        user_id = payload.get('user_id')
+        
+        if not user_id:
+            return jsonify({'error': 'Invalid refresh token'}), 401
+        
+        # Get user
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Generate new access token
+        tokens = generate_token(user.id, user.username, user.email)
+        
+        # Return new access token (and new refresh token)
+        return jsonify({
+            'access_token': tokens['access_token'],
+            'refresh_token': tokens['refresh_token'],
+            'expires_in': tokens['expires_in'],
+            'token_type': tokens['token_type']
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
+
+
+@users_bp.route('/me', methods=['GET'])
+@token_required
+def get_current_user_info(current_user):
+    """Get current authenticated user's information"""
+    return jsonify(current_user.to_dict()), 200

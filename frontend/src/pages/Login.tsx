@@ -20,10 +20,17 @@ function Login() {
 
     try {
       const response = await loginUser({ usernameOrEmail, password } as LoginUser);
-      login(response.data);
+      // Response now includes user, access_token, and refresh_token
+      const { user, access_token, refresh_token } = response.data;
+      
+      if (!user || !access_token || !refresh_token) {
+        setError('Invalid response from server. Please try again.');
+        return;
+      }
+      
+      login(user, access_token, refresh_token);
       navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         setError(err.response.data.error);
       } else {

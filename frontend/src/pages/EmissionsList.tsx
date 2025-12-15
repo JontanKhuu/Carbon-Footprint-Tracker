@@ -22,13 +22,19 @@ function EmissionsList() {
   const [emissions, setEmissions] = useState<Emission[]>([]);
   const [filteredEmissions, setFilteredEmissions] = useState<Emission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState('');
   const [expandedEmissionId, setExpandedEmissionId] = useState<number | null>(null);
   
-  // Filter states
+  // Filter states (actual applied filters)
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  
+  // Input states for filter fields (what user is typing/selecting)
+  const [categoryInput, setCategoryInput] = useState<string>('');
+  const [startDateInput, setStartDateInput] = useState<string>('');
+  const [endDateInput, setEndDateInput] = useState<string>('');
   
   // Sort states
   const [sortField, setSortField] = useState<SortField>('date');
@@ -48,14 +54,19 @@ function EmissionsList() {
     const fetchEmissions = async () => {
       if (!user?.id) {
         setIsLoading(false);
+        setIsInitialLoad(false);
         return;
       }
 
       try {
-        setIsLoading(true);
+        // Only show full loading screen on initial load (when no emissions exist yet)
+        if (isInitialLoad && emissions.length === 0) {
+          setIsLoading(true);
+        }
         setError('');
 
-        const filters: EmissionFilters = { user_id: user.id };
+        // user_id comes from JWT token automatically, no need to send it
+        const filters: EmissionFilters = {};
         if (selectedCategory) {
           filters.category = selectedCategory;
         }
@@ -73,11 +84,13 @@ function EmissionsList() {
         setError('Failed to load emissions. Please try again.');
       } finally {
         setIsLoading(false);
+        setIsInitialLoad(false);
       }
     };
 
     fetchEmissions();
-  }, [user?.id, selectedCategory, startDate, endDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedCategory, startDate, endDate]);
 
   // Apply sorting
   useEffect(() => {
@@ -198,7 +211,40 @@ function EmissionsList() {
     setSelectedCategory('');
     setStartDate('');
     setEndDate('');
+    setCategoryInput('');
+    setStartDateInput('');
+    setEndDateInput('');
   };
+  
+  // Apply all filters when button is clicked
+  const applyFilters = () => {
+    // Validate date range
+    if (startDateInput && endDateInput && endDateInput < startDateInput) {
+      // If invalid, clear end date
+      setEndDateInput('');
+      setEndDate('');
+      setStartDate(startDateInput);
+      setSelectedCategory(categoryInput);
+    } else {
+      // Apply all filters
+      setStartDate(startDateInput);
+      setEndDate(endDateInput);
+      setSelectedCategory(categoryInput);
+    }
+  };
+  
+  // Sync input values with filter values on mount and when filters are cleared
+  useEffect(() => {
+    setCategoryInput(selectedCategory);
+  }, [selectedCategory]);
+  
+  useEffect(() => {
+    setStartDateInput(startDate);
+  }, [startDate]);
+  
+  useEffect(() => {
+    setEndDateInput(endDate);
+  }, [endDate]);
 
   if (isLoading) {
     return (
@@ -285,8 +331,8 @@ function EmissionsList() {
             </label>
             <select
               id="category"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              value={categoryInput}
+              onChange={(e) => setCategoryInput(e.target.value)}
               style={{
                 width: '100%',
                 padding: '8px',
@@ -309,8 +355,15 @@ function EmissionsList() {
             <input
               type="date"
               id="startDate"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={startDateInput}
+              onChange={(e) => setStartDateInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  applyFilters();
+                  e.currentTarget.blur();
+                }
+              }}
+              max={endDateInput || undefined}
               style={{
                 width: '100%',
                 padding: '8px',
@@ -327,8 +380,15 @@ function EmissionsList() {
             <input
               type="date"
               id="endDate"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={endDateInput}
+              onChange={(e) => setEndDateInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  applyFilters();
+                  e.currentTarget.blur();
+                }
+              }}
+              min={startDateInput || undefined}
               style={{
                 width: '100%',
                 padding: '8px',
@@ -339,21 +399,38 @@ function EmissionsList() {
             />
           </div>
         </div>
-        <button
-          onClick={clearFilters}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: '500'
-          }}
-        >
-          Clear Filters
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={applyFilters}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            Apply Filters
+          </button>
+          <button
+            onClick={clearFilters}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
       </div>
 
       {/* Error message */}

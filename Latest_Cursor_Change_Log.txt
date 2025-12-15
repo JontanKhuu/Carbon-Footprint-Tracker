@@ -1,117 +1,159 @@
 # Latest Changes Log
 
-## Date: 2025-12-08 (Latest)
-## Task: Implemented Emission Edit History Feature
+## Date: 2025-12-08
+## Task: Implemented JWT Authentication & Protected Routes (Part 10)
 
 ### What I Did:
-Added a comprehensive edit history tracking system that allows users to view the complete change history of any emission record, showing what fields were changed, when they were changed, and the old vs new values.
+Implemented complete JWT authentication system with protected routes, token refresh mechanism, and automatic token handling in the frontend.
 
-### Step-by-Step Process:
+### Step-by-Step Implementation:
 
-#### 1. Created EmissionHistory Database Model
-- **File created:** `backend/app/models/emission_history.py`
+#### 1. Backend JWT Utilities
+- **File created:** `backend/app/utils/jwt.py`
 - **Features:**
-  - Tracks all emission fields (category, activity, amount, unit, CO2 equivalent, emission factor, date, description)
-  - Stores both old and new values for each edit
-  - Records timestamp of each change
-  - Provides `to_dict()` method that returns only the fields that actually changed
-- **Database table:** `emission_history` (requires migration)
+  - `generate_token()` - Creates access and refresh tokens with user info
+  - `verify_token()` - Validates and decodes JWT tokens
+  - `get_current_user()` - Extracts user from token in request
+  - `token_required` decorator - Protects routes requiring authentication
+  - Token expiration: 24 hours for access tokens, 7 days for refresh tokens
+  - Configurable via environment variables (JWT_SECRET_KEY)
 
-#### 2. Updated Emission Update Endpoint
-- **File modified:** `backend/app/routes/emissions.py`
+#### 2. Updated Login Endpoint
+- **File modified:** `backend/app/routes/users.py`
 - **Changes:**
-  - Modified `update_emission()` function to capture old values before updating
-  - Creates a history entry after each update with both old and new values
-  - History is saved to database automatically on every edit
-- **Import:** Added `EmissionHistory` import
+  - Login now returns JWT tokens (access_token, refresh_token) along with user data
+  - Added `/users/refresh` endpoint for token refresh
+  - Added `/users/me` endpoint to get current authenticated user
+  - Tokens include user_id, username, email, and type (access/refresh)
 
-#### 3. Created History API Endpoint
+#### 3. Protected Emissions Endpoints
 - **File modified:** `backend/app/routes/emissions.py`
-- **New endpoint:** `GET /emissions/<id>/history`
-- **Functionality:**
-  - Returns all edit history entries for a specific emission
-  - Ordered by most recent first
-  - Each entry shows only the fields that changed
-  - Includes timestamp of each change
+- **Protected endpoints:**
+  - `GET /api/emissions` - Now requires authentication, uses current_user.id automatically
+  - `GET /api/emissions/<id>` - Requires auth, verifies ownership
+  - `GET /api/emissions/stats` - Requires auth, uses current_user.id
+  - `GET /api/emissions/<id>/history` - Requires auth, verifies ownership
+  - `POST /api/emissions` - Requires auth, user_id from token (not request body)
+  - `PUT /api/emissions/<id>` - Requires auth, verifies ownership
+  - `DELETE /api/emissions/<id>` - Requires auth, verifies ownership
+- **Security improvements:**
+  - Removed user_id from request body (comes from JWT token)
+  - All endpoints verify emission ownership before operations
+  - Returns 403 Unauthorized if user tries to access another user's emissions
 
-#### 4. Added Frontend API Function
+#### 4. Frontend Token Management
+- **File modified:** `frontend/src/utils/auth.ts`
+- **Changes:**
+  - Added token storage (access_token, refresh_token) in localStorage
+  - Updated `setAuthUser()` to store tokens
+  - Added `getAccessToken()` and `getRefreshToken()` functions
+  - Added `updateTokens()` for token refresh
+  - Updated `removeAuthUser()` to clear tokens
+
+#### 5. API Service with Token Interceptors
 - **File modified:** `frontend/src/services/api.ts`
-- **Added:** `getEmissionHistory(emissionId)` function
-- **Returns:** Array of history entries with change details
+- **Request interceptor:**
+  - Automatically adds `Authorization: Bearer <token>` header to all requests
+  - Retrieves token from localStorage
+- **Response interceptor:**
+  - Handles 401 errors (token expired)
+  - Automatically refreshes token using refresh_token
+  - Retries failed request with new token
+  - Queues multiple requests during token refresh
+  - Logs out user if refresh fails
+- **New endpoints:**
+  - `refreshToken()` - Refresh access token
+  - `getCurrentUser()` - Get current user info
 
-#### 5. Added TypeScript Types
+#### 6. Updated Authentication Context
+- **File modified:** `frontend/src/contexts/AuthContext.tsx`
+- **Changes:**
+  - `login()` now accepts tokens (access_token, refresh_token)
+  - `isAuthenticated` checks for both user and token
+  - Stores tokens along with user data
+
+#### 7. Updated Login Page
+- **File modified:** `frontend/src/pages/Login.tsx`
+- **Changes:**
+  - Handles new login response format (user + tokens)
+  - Passes tokens to AuthContext.login()
+
+#### 8. Updated Types
 - **File modified:** `frontend/src/types/index.ts`
 - **New types:**
-  - `EmissionHistoryEntry` - Represents a single history entry
-  - `EmissionHistoryChange` - Represents a single field change within an entry
+  - `LoginResponse` - Login response with user and tokens
+  - `RefreshTokenResponse` - Token refresh response
+- **Updated types:**
+  - `CreateEmissionRequest` - Removed user_id (comes from token)
 
-#### 6. Added History Button and Modal to EmissionsList
-- **File modified:** `frontend/src/pages/EmissionsList.tsx`
-- **Features:**
-  - "History" button in Actions column (between Edit and Delete)
-  - Modal dialog that displays complete edit history
-  - Shows date/time of each edit
-  - Color-coded changes: red for old values, green for new values
-  - Displays only fields that actually changed
-  - Empty state when no history exists
-  - Loading state while fetching history
-- **State management:**
-  - `emissionHistoryId` - Tracks which emission's history is being viewed
-  - `history` - Stores the history entries
-  - `isLoadingHistory` - Loading state for history fetch
+#### 9. Updated AddEmission Form
+- **File modified:** `frontend/src/pages/AddEmission.tsx`
+- **Changes:**
+  - Removed user_id from formData state
+  - Removed user_id from emission creation/update requests
+  - Backend now gets user_id from JWT token automatically
 
-### Files Modified:
-1. `backend/app/models/emission_history.py` - New model (created)
-2. `backend/app/models/__init__.py` - Added EmissionHistory export
-3. `backend/app/routes/emissions.py` - Added history tracking and API endpoint
-4. `frontend/src/services/api.ts` - Added getEmissionHistory function
-5. `frontend/src/types/index.ts` - Added history type definitions
-6. `frontend/src/pages/EmissionsList.tsx` - Added History button and modal
+#### 10. Dependencies
+- **File modified:** `backend/requirements.txt`
+- **Added:** `PyJWT==2.9.0` for JWT token handling
 
 ### Key Features:
 
-**Backend History Tracking:**
-- Automatically tracks all changes when an emission is updated
-- Stores complete before/after state for all fields
-- Only returns fields that actually changed in API response
-- Timestamps all changes for audit trail
+**Backend Security:**
+- All emissions endpoints require authentication
+- User can only access their own emissions
+- Token-based authentication (no session management needed)
+- Automatic user identification from token
+- Proper error responses (401 Unauthorized, 403 Forbidden)
 
-**Frontend History Display:**
-- Easy access via "History" button in emissions list
-- Modal shows complete edit timeline
-- Visual distinction between old (red) and new (green) values
-- Field names are human-readable (underscores replaced with spaces, capitalized)
-- Date and time displayed for each edit
-- Handles empty history gracefully
+**Frontend Token Handling:**
+- Automatic token injection in all API requests
+- Automatic token refresh on expiration
+- Seamless user experience (no manual token management)
+- Queue system for concurrent requests during refresh
+- Automatic logout on authentication failure
 
-**User Experience:**
-- History button styled consistently with Edit/Delete buttons
-- Modal is scrollable for long history lists
-- Clear visual hierarchy showing what changed and when
-- Easy to close and return to emissions list
+**Token Lifecycle:**
+- Access tokens: 24 hours expiration
+- Refresh tokens: 7 days expiration
+- Automatic refresh before expiration
+- Secure token storage in localStorage
 
-### Database Migration Required:
-To enable this feature, you need to create and run a database migration:
+### Security Improvements:
+1. **No user_id in requests** - Prevents users from accessing/modifying other users' data
+2. **Ownership verification** - All operations verify emission belongs to current user
+3. **Token expiration** - Tokens expire automatically for security
+4. **Refresh mechanism** - Allows seamless token renewal without re-login
 
-```bash
-docker-compose exec backend flask db migrate -m "Add emission history table"
-docker-compose exec backend flask db upgrade
-```
+### Files Modified:
+1. `backend/requirements.txt` - Added PyJWT
+2. `backend/app/utils/jwt.py` - New JWT utilities (created)
+3. `backend/app/utils/__init__.py` - New utils package (created)
+4. `backend/app/routes/users.py` - Updated login, added refresh endpoint
+5. `backend/app/routes/emissions.py` - Protected all endpoints
+6. `frontend/src/utils/auth.ts` - Token storage functions
+7. `frontend/src/services/api.ts` - Token interceptors and refresh logic
+8. `frontend/src/contexts/AuthContext.tsx` - Token handling in context
+9. `frontend/src/pages/Login.tsx` - Handle token response
+10. `frontend/src/pages/AddEmission.tsx` - Removed user_id from requests
+11. `frontend/src/types/index.ts` - Added token response types
 
-This will create the `emission_history` table in your database.
+### Testing Required:
+1. Test login and verify tokens are stored
+2. Test API calls with valid token (should work automatically)
+3. Test token expiration (wait 24 hours or manually expire token)
+4. Test automatic token refresh (should happen seamlessly)
+5. Test accessing another user's emissions (should return 403)
+6. Test logout (should clear tokens)
+7. Test creating emissions without user_id in request body
 
-### Testing:
-1. Edit an emission and verify history is created
-2. Click "History" button on an emission with edits
-3. Verify modal shows all changes with correct old/new values
-4. Verify timestamps are displayed correctly
-5. Test with emissions that have no history (should show empty state)
-6. Test with emissions that have multiple edits (should show all in chronological order)
+### Breaking Changes:
+- **API:** All emissions endpoints now require `Authorization: Bearer <token>` header
+- **API:** `POST /api/emissions` no longer accepts `user_id` in request body
+- **Frontend:** Login response format changed (now includes tokens)
+- **Frontend:** CreateEmissionRequest no longer includes user_id
 
-### How It Works:
-1. When a user edits an emission, the backend captures the old values
-2. After updating, it creates a history entry with both old and new values
-3. The history entry is saved to the database
-4. When user clicks "History" button, frontend fetches all history entries
-5. Modal displays each entry showing only the fields that changed
-6. Changes are color-coded for easy visual comparison
+### Migration Notes:
+- Existing users will need to log in again to get JWT tokens
+- Frontend automatically handles token management
+- No database migration needed (JWT is stateless)

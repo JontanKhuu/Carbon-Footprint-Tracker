@@ -24,16 +24,16 @@ export interface Emission {
 }
 
 // Filter/Query parameter types
+// Note: user_id is no longer needed - it comes from JWT token automatically
 export interface EmissionFilters {
-  user_id?: number;
   category?: string;
   start_date?: string;
   end_date?: string;
 }
 
 // Create emission request type
+// Note: user_id is no longer required - it comes from the JWT token
 export interface CreateEmissionRequest {
-  user_id: number;
   category: string;
   activity: string;
   amount: number;
@@ -77,6 +77,22 @@ export interface RegisterUserRequest {
 export interface LoginUser {
   usernameOrEmail: string,
   password: string,
+}
+
+// Authentication token types
+export interface LoginResponse {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+export interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
 }
 
 // Emission history types

@@ -153,7 +153,6 @@ function AddEmission() {
   const isEditMode = !!editId;
   
   const [formData, setFormData] = useState<CreateEmissionRequest>({
-    user_id: user?.id || 0,
     category: '',
     activity: '',
     amount: 0,
@@ -210,8 +209,8 @@ function AddEmission() {
         const emission = response.data;
 
         // Pre-fill form with emission data
+        // Note: user_id is not needed - it comes from JWT token
         setFormData({
-          user_id: emission.user_id,
           category: emission.category,
           activity: emission.activity,
           amount: emission.amount,
@@ -526,8 +525,8 @@ function AddEmission() {
 
     try {
       // Build emission data - include CO2 fields if provided (user can override auto-calculated values)
+      // Note: user_id is no longer needed - it comes from the JWT token
       const emissionData: CreateEmissionRequest = {
-        user_id: user.id,
         category: formData.category,
         activity: formData.activity,
         amount: formData.amount,

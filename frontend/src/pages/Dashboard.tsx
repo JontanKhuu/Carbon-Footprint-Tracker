@@ -27,12 +27,12 @@ function Dashboard() {
         setIsLoading(true);
         setError('');
 
-        // Get user's emissions (filtered by user_id)
-        const emissionsResponse = await getEmissions({ user_id: user.id });
+        // Get user's emissions (user_id comes from JWT token automatically)
+        const emissionsResponse = await getEmissions();
         setEmissions(emissionsResponse.data);
 
-        // Get overall statistics for user
-        const statsResponse = await getEmissionStats({ user_id: user.id });
+        // Get overall statistics for user (user_id comes from JWT token automatically)
+        const statsResponse = await getEmissionStats();
         setStats(statsResponse.data);
 
         // Get this month's statistics
@@ -43,7 +43,6 @@ function Dashboard() {
         const monthEnd = formatDateLocal(lastDayOfMonth);
 
         const monthStatsResponse = await getEmissionStats({
-          user_id: user.id,
           start_date: monthStart,
           end_date: monthEnd,
         });
