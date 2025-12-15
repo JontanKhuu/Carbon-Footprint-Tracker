@@ -115,8 +115,8 @@ function EmissionsList() {
       }
 
       if (sortField === 'date') {
-        // Date comparison
-        const comparison = aValue.localeCompare(bValue);
+        // Date comparison (ensure values are strings)
+        const comparison = String(aValue).localeCompare(String(bValue));
         return sortDirection === 'asc' ? comparison : -comparison;
       } else {
         // Numeric comparison

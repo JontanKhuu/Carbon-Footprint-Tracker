@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#Miscellaneous
+TODO.md
+CURRENT_TASKS.md
+Latest_Cursor_Change_Log.txt
+Soon.txt
