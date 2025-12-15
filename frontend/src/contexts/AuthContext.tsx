@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../types';
 import { getAuthUser, setAuthUser, removeAuthUser, getAccessToken } from '../utils/auth';
@@ -15,42 +15,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize state from localStorage
   const [user, setUser] = useState<User | null>(() => getAuthUser());
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    const storedUser = getAuthUser();
-    const token = getAccessToken();
-    return storedUser !== null && token !== null;
-  });
   const navigate = useNavigate();
 
-  // Update isAuthenticated when user or token changes
+  // Compute isAuthenticated as a derived value
+  const isAuthenticated = useMemo(() => {
+    const token = getAccessToken();
+    const storedUser = getAuthUser();
+    return (user !== null || storedUser !== null) && token !== null;
+  }, [user]);
+
+  // Restore user from localStorage if token exists but user state is null
   useEffect(() => {
     const token = getAccessToken();
     const storedUser = getAuthUser();
-    const authenticated = (user !== null || storedUser !== null) && token !== null;
     
-    if (authenticated !== isAuthenticated) {
-      setIsAuthenticated(authenticated);
-    }
-    
-    // If we have a token but no user state, restore user from localStorage
     if (token && storedUser && !user) {
       setUser(storedUser);
     }
-  }, [user, isAuthenticated]);
+  }, [user]);
 
   const login = (userData: User, accessToken: string, refreshToken: string) => {
     // Store in localStorage first
     setAuthUser(userData, accessToken, refreshToken);
     
-    // Update state - this should trigger re-render
+    // Update state - this will trigger re-render and update isAuthenticated
     setUser(userData);
-    setIsAuthenticated(true);
   };
 
   const logout = () => {
     removeAuthUser();
     setUser(null);
-    setIsAuthenticated(false);
     navigate('/login');
   };
 
