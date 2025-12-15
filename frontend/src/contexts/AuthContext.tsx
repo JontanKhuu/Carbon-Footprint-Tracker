@@ -18,20 +18,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   // Compute isAuthenticated as a derived value
+  // This will automatically check localStorage if user state is null
   const isAuthenticated = useMemo(() => {
     const token = getAccessToken();
     const storedUser = getAuthUser();
-    return (user !== null || storedUser !== null) && token !== null;
-  }, [user]);
-
-  // Restore user from localStorage if token exists but user state is null
-  useEffect(() => {
-    const token = getAccessToken();
-    const storedUser = getAuthUser();
-    
-    if (token && storedUser && !user) {
-      setUser(storedUser);
-    }
+    // Use storedUser if user state is null (for initial load)
+    const currentUser = user || storedUser;
+    return currentUser !== null && token !== null;
   }, [user]);
 
   const login = (userData: User, accessToken: string, refreshToken: string) => {
