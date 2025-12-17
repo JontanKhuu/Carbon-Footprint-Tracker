@@ -13,6 +13,14 @@ SWAGGER_CONFIG = {
     ],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
+    "ui_params": {
+        "deepLinking": True,
+        "displayRequestDuration": True,
+        "docExpansion": "list",
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+    }
 }
 
 SWAGGER_TEMPLATE = {
@@ -33,14 +41,15 @@ SWAGGER_TEMPLATE = {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header",
-            "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+            "description": "JWT Authorization header using the Bearer scheme. Enter your access_token from the login response. Format: Bearer {token} (Swagger UI will add 'Bearer ' prefix automatically)"
         }
     },
-    "security": [
-        {
-            "Bearer": []
-        }
-    ],
+    # Remove global security - only endpoints with @token_required should require auth
+    # "security": [
+    #     {
+    #         "Bearer": []
+    #     }
+    # ],
     "tags": [
         {
             "name": "Health",

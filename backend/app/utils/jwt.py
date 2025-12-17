@@ -130,11 +130,19 @@ def get_token_from_request() -> Optional[str]:
         return None
     
     # Check for Bearer token format
+    # Handle both "Bearer token" and just "token" (Swagger UI might send either)
     parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != 'bearer':
-        return None
+    if len(parts) == 2:
+        # Format: "Bearer <token>"
+        if parts[0].lower() == 'bearer':
+            return parts[1]
+    elif len(parts) == 1:
+        # Format: just "<token>" - Swagger UI might send this if user pastes token without Bearer
+        # Check if it looks like a JWT (has dots)
+        if '.' in parts[0]:
+            return parts[0]
     
-    return parts[1]
+    return None
 
 
 def token_required(f):

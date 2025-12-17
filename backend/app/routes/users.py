@@ -14,7 +14,8 @@ def get_users():
     tags:
       - Users
     summary: Retrieve all users
-    description: Returns a list of all registered users in the system
+    description: Returns a list of all registered users in the system. This endpoint does not require authentication.
+    security: []  # No authentication required
     responses:
       200:
         description: List of users
@@ -318,7 +319,16 @@ def login():
     tags:
       - Users
     summary: Authenticate user and get JWT tokens
-    description: Authenticates a user with username/email and password, returns JWT access and refresh tokens
+    description: |
+      Authenticates a user with username/email and password, returns JWT access and refresh tokens.
+      
+      **After successful login:**
+      1. Copy the `access_token` value from the response
+      2. Click the "Authorize" button at the top of the Swagger UI
+      3. Paste the token into the "Value" field (do NOT include "Bearer " - Swagger UI adds it automatically)
+      4. Click "Authorize" to save the token
+      5. Now you can test protected endpoints
+    security: []  # No authentication required for login
     parameters:
       - name: body
         in: body

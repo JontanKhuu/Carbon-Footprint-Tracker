@@ -87,7 +87,8 @@ carbon-footprint-tracker/
 5. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5000
-   - API Health Check: http://localhost:5000/health
+   - API Health Check: http://localhost:5000/api/health
+   - Swagger UI: http://localhost:5000/apidocs/
 
 #### Option 2: Manual Setup
 
@@ -145,7 +146,7 @@ carbon-footprint-tracker/
 ## 📡 API Endpoints
 
 ### Health Check
-- `GET /health` - Check API health status
+- `GET /api/health` - Check API health status
 
 ### Users
 - `GET /api/users` - Get all users

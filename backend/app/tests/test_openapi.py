@@ -64,7 +64,7 @@ def test_openapi_spec_has_all_endpoints(openapi_spec):
     # Note: Flasgger may include basePath in paths or not, so check both
     # Check for key endpoints (with and without basePath)
     expected_paths = [
-        '/health',
+        '/health',  # Flasgger strips basePath from paths in the spec
         '/users',
         '/users/login',
         '/emissions',

@@ -112,7 +112,8 @@ def get_activities():
     tags:
       - Emissions
     summary: Get list of supported activities and emission factors
-    description: Returns all supported emission activities, their emission factors, and expected units. Optionally filtered by category.
+    description: Returns all supported emission activities, their emission factors, and expected units. Optionally filtered by category. This endpoint does not require authentication.
+    security: []  # No authentication required
     parameters:
       - name: category
         in: query

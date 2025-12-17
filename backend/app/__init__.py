@@ -37,9 +37,27 @@ def create_app(config_name='default'):
     
     # Register blueprints FIRST (before Swagger initialization)
     from app.routes import emissions_bp, users_bp, health_bp
-    app.register_blueprint(health_bp)
+    # Register health blueprint with /api prefix to match Swagger basePath
+    app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(emissions_bp, url_prefix='/api/emissions')
     app.register_blueprint(users_bp, url_prefix='/api/users')
+    
+    # Register routes to serve custom Swagger CSS and JS
+    @app.route('/static/swagger_custom.css')
+    def swagger_custom_css():
+        """Serve custom CSS for Swagger UI"""
+        from flask import send_from_directory
+        import os
+        css_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'swagger_custom.css')
+        return send_from_directory(os.path.dirname(css_path), 'swagger_custom.css', mimetype='text/css')
+    
+    @app.route('/static/swagger_custom.js')
+    def swagger_custom_js():
+        """Serve custom JavaScript for Swagger UI"""
+        from flask import send_from_directory
+        import os
+        js_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'swagger_custom.js')
+        return send_from_directory(os.path.dirname(js_path), 'swagger_custom.js', mimetype='application/javascript')
     
     # Initialize Swagger for API documentation AFTER routes are registered
     # This allows Flasgger to scan and document all registered routes
@@ -52,6 +70,43 @@ def create_app(config_name='default'):
         # Don't fail the app startup if Swagger fails, but log the error
         import traceback
         app.logger.error(traceback.format_exc())
+    
+    # Inject custom CSS and JS into Swagger UI responses
+    @app.after_request
+    def inject_swagger_custom_assets(response):
+        """Inject custom CSS and JS into Swagger UI to fix text visibility"""
+        # Only modify Swagger UI HTML responses
+        if response.content_type and 'text/html' in response.content_type:
+            try:
+                # Check if this is a Swagger UI page
+                data = response.get_data(as_text=True)
+                # Check for Swagger UI indicators in the HTML or URL path
+                is_swagger_page = (
+                    'swagger-ui' in data.lower() or 
+                    'swagger' in data.lower() or
+                    (hasattr(response, 'request') and response.request and 
+                     ('apidocs' in response.request.path.lower() if hasattr(response.request, 'path') else False))
+                )
+                
+                if is_swagger_page:
+                    # Inject custom CSS link
+                    css_injection = '<link rel="stylesheet" type="text/css" href="/static/swagger_custom.css" />'
+                    # Inject custom JS
+                    js_injection = '<script src="/static/swagger_custom.js"></script>'
+                    
+                    # Inject before closing head tag
+                    if '</head>' in data:
+                        data = data.replace('</head>', f'    {css_injection}\n</head>')
+                    # Inject before closing body tag
+                    if '</body>' in data:
+                        data = data.replace('</body>', f'    {js_injection}\n</body>')
+                    
+                    response.set_data(data)
+            except Exception as e:
+                # If injection fails, log but don't break the response
+                app.logger.warning(f"Failed to inject Swagger custom assets: {e}")
+        
+        return response
     
     # Create database tables if they don't exist
     # db.create_all() with checkfirst=True (default) is safe - it only creates

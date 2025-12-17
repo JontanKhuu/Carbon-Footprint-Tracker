@@ -12,7 +12,8 @@ def health_check():
     tags:
       - Health
     summary: Check API and database health status
-    description: Returns the health status of the API and database connection
+    description: Returns the health status of the API and database connection. This endpoint does not require authentication.
+    security: []  # No authentication required
     responses:
       200:
         description: Health status information
@@ -52,6 +53,7 @@ def debug_routes():
       - Health
     summary: List all registered routes (debug endpoint)
     description: Returns a list of all registered routes for debugging purposes
+    security: []  # No authentication required
     responses:
       200:
         description: List of routes
@@ -92,5 +94,28 @@ def debug_routes():
         'total_routes': len(routes),
         'routes': routes,
         'flasgger': flasgger_info
+    }), 200
+
+
+@health_bp.route('/debug/headers', methods=['GET'])
+def debug_headers():
+    """
+    Debug endpoint to inspect request headers
+    ---
+    tags:
+      - Health
+    summary: Debug request headers (debug endpoint)
+    description: Returns all request headers for debugging authentication issues
+    security: []  # No authentication required
+    responses:
+      200:
+        description: Request headers
+    """
+    from flask import request
+    headers = dict(request.headers)
+    return jsonify({
+        'headers': headers,
+        'authorization_header': request.headers.get('Authorization', 'NOT FOUND'),
+        'authorization_parts': request.headers.get('Authorization', '').split() if request.headers.get('Authorization') else []
     }), 200
 
