@@ -1,0 +1,70 @@
+/* Custom CSS for Swagger UI to fix text visibility issues */
+
+/* Fix input text color - ensure text is visible on white background */
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="email"],
+.swagger-ui input[type="number"],
+.swagger-ui input[type="date"],
+.swagger-ui input[type="datetime-local"],
+.swagger-ui textarea,
+.swagger-ui select {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+/* Fix textarea text color */
+.swagger-ui textarea {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+/* Fix parameter input fields */
+.swagger-ui .parameter__name,
+.swagger-ui .parameter__type,
+.swagger-ui input.parameter__name,
+.swagger-ui input.parameter__type {
+    color: #333 !important;
+}
+
+/* Fix body editor text color */
+.swagger-ui .body-param__text,
+.swagger-ui .body-param__example,
+.swagger-ui textarea.body-param__text {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+/* Fix CodeMirror editor text (if used) */
+.swagger-ui .CodeMirror,
+.swagger-ui .CodeMirror-code,
+.swagger-ui .CodeMirror-lines {
+    color: #333 !important;
+}
+
+/* Ensure all input fields have proper contrast */
+.swagger-ui input:not([type="checkbox"]):not([type="radio"]),
+.swagger-ui textarea,
+.swagger-ui select {
+    color: #333333 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ccc !important;
+}
+
+/* Fix focus states */
+.swagger-ui input:focus,
+.swagger-ui textarea:focus,
+.swagger-ui select:focus {
+    color: #333 !important;
+    background-color: #fff !important;
+    border-color: #4990e2 !important;
+    outline: none !important;
+}
+
+/* Fix placeholder text */
+.swagger-ui input::placeholder,
+.swagger-ui textarea::placeholder {
+    color: #999 !important;
+    opacity: 1 !important;
+}
+
