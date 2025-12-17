@@ -20,7 +20,71 @@ emissions_bp = Blueprint('emissions', __name__)
 @emissions_bp.route('', methods=['GET'])
 @token_required
 def get_emissions(current_user):
-    """Get all emissions with optional filtering (requires authentication)"""
+    """
+    Get All Emissions
+    ---
+    tags:
+      - Emissions
+    summary: Retrieve all emissions for the authenticated user
+    description: Returns a list of all emission records for the current user with optional filtering
+    security:
+      - Bearer: []
+    parameters:
+      - name: category
+        in: query
+        type: string
+        required: false
+        description: Filter by category (e.g., transport, energy, food)
+      - name: start_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter emissions from this date (ISO format)
+      - name: end_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter emissions until this date (ISO format)
+    responses:
+      200:
+        description: List of emissions
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              user_id:
+                type: integer
+              category:
+                type: string
+              activity:
+                type: string
+              amount:
+                type: number
+              unit:
+                type: string
+              co2_equivalent:
+                type: number
+              emission_factor:
+                type: number
+              date:
+                type: string
+                format: date
+              description:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+      401:
+        description: Unauthorized - Invalid or missing token
+    """
     # Use current_user's ID instead of user_id from query params for security
     user_id = current_user.id
     category = request.args.get('category')
@@ -42,7 +106,52 @@ def get_emissions(current_user):
 
 @emissions_bp.route('/activities', methods=['GET'])
 def get_activities():
-    """Get supported activities and their emission factors"""
+    """
+    Get Supported Activities
+    ---
+    tags:
+      - Emissions
+    summary: Get list of supported activities and emission factors
+    description: Returns all supported emission activities, their emission factors, and expected units. Optionally filtered by category.
+    parameters:
+      - name: category
+        in: query
+        type: string
+        required: false
+        description: Filter by category (e.g., transport, energy, food)
+    responses:
+      200:
+        description: Supported activities grouped by category
+        schema:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              activities:
+                type: array
+                items:
+                  type: string
+              emission_factors:
+                type: object
+                additionalProperties:
+                  type: number
+              expected_units:
+                type: object
+                additionalProperties:
+                  type: string
+        examples:
+          application/json:
+            transport:
+              activities: ["car_drive", "plane_flight", "train_ride"]
+              emission_factors:
+                car_drive: 0.171
+                plane_flight: 0.255
+                train_ride: 0.041
+              expected_units:
+                car_drive: "km"
+                plane_flight: "km"
+                train_ride: "km"
+    """
     category = request.args.get('category')
     
     if category:
@@ -73,7 +182,67 @@ def get_activities():
 @emissions_bp.route('/stats', methods=['GET'])
 @token_required
 def get_emission_stats(current_user):
-    """Get emission statistics (requires authentication)"""
+    """
+    Get Emission Statistics
+    ---
+    tags:
+      - Emissions
+    summary: Get emission statistics for the authenticated user
+    description: Returns aggregated statistics including total CO2 equivalent, record count, and breakdown by category
+    security:
+      - Bearer: []
+    parameters:
+      - name: start_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter statistics from this date (ISO format)
+      - name: end_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter statistics until this date (ISO format)
+    responses:
+      200:
+        description: Emission statistics
+        schema:
+          type: object
+          properties:
+            total_co2_equivalent:
+              type: number
+              description: Total CO2 equivalent in kg
+              example: 1250.5
+            total_records:
+              type: integer
+              description: Total number of emission records
+              example: 45
+            by_category:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                  total_co2_equivalent:
+                    type: number
+                  count:
+                    type: integer
+        examples:
+          application/json:
+            total_co2_equivalent: 1250.5
+            total_records: 45
+            by_category:
+              - category: transport
+                total_co2_equivalent: 850.2
+                count: 20
+              - category: energy
+                total_co2_equivalent: 400.3
+                count: 25
+      401:
+        description: Unauthorized - Invalid or missing token
+    """
     # Use current_user's ID for security
     user_id = current_user.id
     start_date = request.args.get('start_date')
@@ -120,7 +289,55 @@ def get_emission_stats(current_user):
 @emissions_bp.route('/<int:emission_id>/history', methods=['GET'])
 @token_required
 def get_emission_history(emission_id, current_user):
-    """Get edit history for an emission (requires authentication)"""
+    """
+    Get Emission Edit History
+    ---
+    tags:
+      - Emissions
+    summary: Get edit history for a specific emission
+    description: Returns the complete edit history for an emission record, showing all changes over time
+    security:
+      - Bearer: []
+    parameters:
+      - name: emission_id
+        in: path
+        type: integer
+        required: true
+        description: The ID of the emission record
+    responses:
+      200:
+        description: List of history entries
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              emission_id:
+                type: integer
+              old_category:
+                type: string
+              new_category:
+                type: string
+              old_activity:
+                type: string
+              new_activity:
+                type: string
+              old_amount:
+                type: number
+              new_amount:
+                type: number
+              changed_at:
+                type: string
+                format: date-time
+      401:
+        description: Unauthorized - Invalid or missing token
+      403:
+        description: Forbidden - Emission does not belong to current user
+      404:
+        description: Emission not found
+    """
     # Verify emission exists and belongs to current user
     emission = Emission.query.get_or_404(emission_id)
     
@@ -137,7 +354,61 @@ def get_emission_history(emission_id, current_user):
 @emissions_bp.route('/<int:emission_id>', methods=['GET'])
 @token_required
 def get_emission(emission_id, current_user):
-    """Get a specific emission by ID (requires authentication)"""
+    """
+    Get Emission by ID
+    ---
+    tags:
+      - Emissions
+    summary: Retrieve a specific emission record
+    description: Returns detailed information about a specific emission record
+    security:
+      - Bearer: []
+    parameters:
+      - name: emission_id
+        in: path
+        type: integer
+        required: true
+        description: The ID of the emission record
+    responses:
+      200:
+        description: Emission record details
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            user_id:
+              type: integer
+            category:
+              type: string
+            activity:
+              type: string
+            amount:
+              type: number
+            unit:
+              type: string
+            co2_equivalent:
+              type: number
+            emission_factor:
+              type: number
+            date:
+              type: string
+              format: date
+            description:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+      401:
+        description: Unauthorized - Invalid or missing token
+      403:
+        description: Forbidden - Emission does not belong to current user
+      404:
+        description: Emission not found
+    """
     emission = Emission.query.get_or_404(emission_id)
     
     # Verify emission belongs to current user
@@ -150,7 +421,106 @@ def get_emission(emission_id, current_user):
 @emissions_bp.route('', methods=['POST'])
 @token_required
 def create_emission(current_user):
-    """Create a new emission record (requires authentication)"""
+    """
+    Create New Emission
+    ---
+    tags:
+      - Emissions
+    summary: Create a new emission record
+    description: Creates a new carbon emission record. CO2 equivalent is automatically calculated if not provided.
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - category
+            - activity
+            - amount
+            - unit
+            - date
+          properties:
+            category:
+              type: string
+              example: transport
+              description: Emission category (e.g., transport, energy, food)
+            activity:
+              type: string
+              example: car_drive
+              description: Activity type (e.g., car_drive, electricity_usage)
+            amount:
+              type: number
+              example: 100
+              description: Amount of the activity
+            unit:
+              type: string
+              example: km
+              description: Unit of measurement (e.g., km, kWh, kg)
+            date:
+              type: string
+              format: date
+              example: "2024-01-15"
+              description: Date of the emission (ISO format)
+            description:
+              type: string
+              example: Daily commute to work
+              description: Optional description
+            co2_equivalent:
+              type: number
+              example: 17.1
+              description: CO2 equivalent in kg (optional, will be calculated if not provided)
+            emission_factor:
+              type: number
+              example: 0.171
+              description: Emission factor used (optional, will be calculated if not provided)
+    responses:
+      201:
+        description: Emission created successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            user_id:
+              type: integer
+            category:
+              type: string
+            activity:
+              type: string
+            amount:
+              type: number
+            unit:
+              type: string
+            co2_equivalent:
+              type: number
+            emission_factor:
+              type: number
+            date:
+              type: string
+              format: date
+            description:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+      400:
+        description: Validation error or missing required fields
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      401:
+        description: Unauthorized - Invalid or missing token
+    """
     data = request.get_json()
     
     # Required fields (user_id is now taken from token, co2_equivalent and emission_factor are optional)
@@ -225,7 +595,94 @@ def create_emission(current_user):
 @emissions_bp.route('/<int:emission_id>', methods=['PUT'])
 @token_required
 def update_emission(emission_id, current_user):
-    """Update an existing emission record (requires authentication)"""
+    """
+    Update Emission
+    ---
+    tags:
+      - Emissions
+    summary: Update an existing emission record
+    description: Updates an emission record. Changes are tracked in history. Only provided fields are updated.
+    security:
+      - Bearer: []
+    parameters:
+      - name: emission_id
+        in: path
+        type: integer
+        required: true
+        description: The ID of the emission record to update
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            category:
+              type: string
+              example: transport
+            activity:
+              type: string
+              example: car_drive
+            amount:
+              type: number
+              example: 150
+            unit:
+              type: string
+              example: km
+            date:
+              type: string
+              format: date
+              example: "2024-01-20"
+            description:
+              type: string
+              example: Updated description
+            co2_equivalent:
+              type: number
+              example: 25.65
+            emission_factor:
+              type: number
+              example: 0.171
+    responses:
+      200:
+        description: Emission updated successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            user_id:
+              type: integer
+            category:
+              type: string
+            activity:
+              type: string
+            amount:
+              type: number
+            unit:
+              type: string
+            co2_equivalent:
+              type: number
+            emission_factor:
+              type: number
+            date:
+              type: string
+              format: date
+            description:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+      400:
+        description: Validation error
+      401:
+        description: Unauthorized - Invalid or missing token
+      403:
+        description: Forbidden - Emission does not belong to current user
+      404:
+        description: Emission not found
+    """
     emission = Emission.query.get_or_404(emission_id)
     
     # Verify emission belongs to current user
@@ -322,7 +779,37 @@ def update_emission(emission_id, current_user):
 @emissions_bp.route('/<int:emission_id>', methods=['DELETE'])
 @token_required
 def delete_emission(emission_id, current_user):
-    """Delete an emission record (requires authentication)"""
+    """
+    Delete Emission
+    ---
+    tags:
+      - Emissions
+    summary: Delete an emission record
+    description: Permanently deletes an emission record
+    security:
+      - Bearer: []
+    parameters:
+      - name: emission_id
+        in: path
+        type: integer
+        required: true
+        description: The ID of the emission record to delete
+    responses:
+      200:
+        description: Emission deleted successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Emission deleted successfully
+      401:
+        description: Unauthorized - Invalid or missing token
+      403:
+        description: Forbidden - Emission does not belong to current user
+      404:
+        description: Emission not found
+    """
     emission = Emission.query.get_or_404(emission_id)
     
     # Verify emission belongs to current user
