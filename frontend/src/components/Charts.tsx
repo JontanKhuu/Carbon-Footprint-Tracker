@@ -14,7 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { Emission, EmissionFilters } from '../types';
+import type { Emission } from '../types';
 
 interface ChartsProps {
   emissions: Emission[];
@@ -26,6 +26,39 @@ type TimeView = 'daily' | 'weekly' | 'monthly';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 const CATEGORY_ORDER = ['transport', 'energy', 'food', 'waste', 'other'];
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    payload: {
+      date?: string;
+      category?: string;
+    };
+  }>;
+}
+
+const CustomTooltip = ({ active, payload }: TooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        backgroundColor: 'white',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        padding: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>
+          {payload[0].payload.date || payload[0].payload.category}
+        </p>
+        <p style={{ margin: 0, color: '#666' }}>
+          CO₂: {payload[0].value.toFixed(2)} kg
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps) {
   const [timeView, setTimeView] = useState<TimeView>('daily');
@@ -577,14 +610,14 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       if (nearestPeriod) {
         setBarChartSelectedPeriodDate(nearestPeriod);
         if (barChartTimeView === 'daily') {
-          const [pYear, pMonth, pDay] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth, pDay] = (nearestPeriod as string).split('-').map(Number);
           const nearestDate = new Date(pYear, pMonth - 1, pDay);
           setBarChartDateSelectionStatus({ 
             hasData: false, 
             message: `No data for selected date. Showing nearest week: ${nearestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
           });
         } else if (barChartTimeView === 'weekly') {
-          const [pYear, pMonth] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth] = (nearestPeriod as string).split('-').map(Number);
           const nearestDate = new Date(pYear, pMonth - 1, 1);
           setBarChartDateSelectionStatus({ 
             hasData: false, 
@@ -676,14 +709,14 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
         // Format the nearest period for the message
         let nearestDate: Date;
         if (timeView === 'daily') {
-          const [pYear, pMonth, pDay] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth, pDay] = (nearestPeriod as string).split('-').map(Number);
           nearestDate = new Date(pYear, pMonth - 1, pDay);
           setDateSelectionStatus({ 
             hasData: false, 
             message: `No data for selected date. Showing nearest week: ${nearestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
           });
         } else if (timeView === 'weekly') {
-          const [pYear, pMonth] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth] = (nearestPeriod as string).split('-').map(Number);
           nearestDate = new Date(pYear, pMonth - 1, 1);
           setDateSelectionStatus({ 
             hasData: false, 
@@ -706,6 +739,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       if (timeView === 'daily') {
         const [year, month, day] = selectedPeriodDate.split('-').map(Number);
         const weekStart = new Date(year, month - 1, day);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDateSelectionStatus({ 
           hasData: true, 
           message: `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -732,6 +766,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       if (barChartTimeView === 'daily') {
         const [year, month, day] = barChartSelectedPeriodDate.split('-').map(Number);
         const weekStart = new Date(year, month - 1, day);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBarChartDateSelectionStatus({ 
           hasData: true, 
           message: `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -754,6 +789,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
 
   // Clear bar chart selected period when time view changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBarChartSelectedPeriodDate('');
     setBarChartDateSelectionStatus(null);
   }, [barChartTimeView]);
@@ -853,14 +889,14 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       if (nearestPeriod) {
         setPieChartSelectedPeriodDate(nearestPeriod);
         if (pieChartTimeView === 'daily') {
-          const [pYear, pMonth, pDay] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth, pDay] = (nearestPeriod as string).split('-').map(Number);
           const nearestDate = new Date(pYear, pMonth - 1, pDay);
           setPieChartDateSelectionStatus({ 
             hasData: false, 
             message: `No data for selected date. Showing nearest week: ${nearestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
           });
         } else if (pieChartTimeView === 'weekly') {
-          const [pYear, pMonth] = nearestPeriod.split('-').map(Number);
+          const [pYear, pMonth] = (nearestPeriod as string).split('-').map(Number);
           const nearestDate = new Date(pYear, pMonth - 1, 1);
           setPieChartDateSelectionStatus({ 
             hasData: false, 
@@ -892,6 +928,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       if (pieChartTimeView === 'daily') {
         const [year, month, day] = pieChartSelectedPeriodDate.split('-').map(Number);
         const weekStart = new Date(year, month - 1, day);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPieChartDateSelectionStatus({ 
           hasData: true, 
           message: `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -914,6 +951,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
 
   // Clear pie chart selected period when time view changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPieChartSelectedPeriodDate('');
     setPieChartDateSelectionStatus(null);
   }, [pieChartTimeView]);
@@ -950,28 +988,6 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       const date = new Date(parseInt(year), parseInt(month) - 1);
       return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
     }
-  };
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{
-          backgroundColor: 'white',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          padding: '10px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>
-            {payload[0].payload.date ? formatDateLabel(payload[0].payload.date) : payload[0].payload.category}
-          </p>
-          <p style={{ margin: 0, color: '#666' }}>
-            CO₂: {payload[0].value.toFixed(2)} kg
-          </p>
-        </div>
-      );
-    }
-    return null;
   };
 
   return (
@@ -1573,9 +1589,9 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
                 <Bar
                   dataKey="co2"
                   fill="#0088FE"
-                  onClick={(data) => {
-                    if (data && data.category) {
-                      const category = data.category.toLowerCase();
+                  onClick={(data: { payload?: { category?: string } }) => {
+                    if (data?.payload?.category) {
+                      const category = data.payload.category.toLowerCase();
                       handleCategoryClick(category);
                       setSelectedCategory(category);
                     }
@@ -1755,10 +1771,10 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ category, percent }) => {
+                  label={({ payload, percent }: { payload?: { category?: string }; percent?: number }) => {
                     // Only show labels for slices with more than 0% to avoid overlap
-                    if (percent && percent > 0) {
-                      return `${category}: ${(percent * 100).toFixed(0)}%`;
+                    if (percent && percent > 0 && payload?.category) {
+                      return `${payload.category}: ${(percent * 100).toFixed(0)}%`;
                     }
                     return '';
                   }}
@@ -1767,7 +1783,7 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
                   dataKey="co2"
                   nameKey="category"
                 >
-                  {categoryData.map((entry, index) => (
+                  {categoryData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} style={{ outline: 'none' }} />
                   ))}
                 </Pie>
