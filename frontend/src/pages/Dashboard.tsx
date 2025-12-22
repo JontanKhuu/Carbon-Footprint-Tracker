@@ -4,6 +4,7 @@ import { getEmissions, getEmissionStats } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { formatDateLocal } from '../utils/date';
 import type { Emission, EmissionStats } from '../types';
+import Charts from '../components/Charts';
 
 function Dashboard() {
   const { user } = useAuth();
@@ -294,6 +295,11 @@ function Dashboard() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Data Visualization Charts */}
+      {emissions.length > 0 && (
+        <Charts emissions={emissions} />
       )}
 
       {/* Recent Emissions Table */}
