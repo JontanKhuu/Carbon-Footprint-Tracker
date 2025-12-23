@@ -37,3 +37,6 @@ PyJWT==2.9.0
 # API Documentation
 flasgger==0.9.7.1
 
+# Rate Limiting
+Flask-Limiter==3.8.0
+

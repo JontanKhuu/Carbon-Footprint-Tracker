@@ -12,6 +12,10 @@ class Config:
     
     # CORS settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    
+    # Rate limiting settings
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL')  # Optional: Redis URL for distributed rate limiting
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'
 
 
 class DevelopmentConfig(Config):
