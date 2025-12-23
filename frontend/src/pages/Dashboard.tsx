@@ -11,6 +11,8 @@ function Dashboard() {
   const [emissions, setEmissions] = useState<Emission[]>([]);
   const [stats, setStats] = useState<EmissionStats | null>(null);
   const [monthStats, setMonthStats] = useState<EmissionStats | null>(null);
+  const [previousMonthStats, setPreviousMonthStats] = useState<EmissionStats | null>(null);
+  const [previousYearStats, setPreviousYearStats] = useState<EmissionStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedEmissionId, setExpandedEmissionId] = useState<number | null>(null);
@@ -48,6 +50,45 @@ function Dashboard() {
           end_date: monthEnd,
         });
         setMonthStats(monthStatsResponse.data);
+
+        // Get previous month's statistics (for month-over-month comparison)
+        const firstDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        const previousMonthStart = formatDateLocal(firstDayOfPreviousMonth);
+        const previousMonthEnd = formatDateLocal(lastDayOfPreviousMonth);
+
+        // Wrap in try-catch to prevent failures from breaking the dashboard
+        try {
+          const previousMonthStatsResponse = await getEmissionStats({
+            start_date: previousMonthStart,
+            end_date: previousMonthEnd,
+          });
+          setPreviousMonthStats(previousMonthStatsResponse.data);
+        } catch (err) {
+          console.warn('Failed to fetch previous month stats:', err);
+          // Set to null so comparison card won't show
+          setPreviousMonthStats(null);
+        }
+
+        // Get same month previous year's statistics (for year-over-year comparison)
+        // Calculate dates outside try-catch
+        const firstDayOfPreviousYearMonth = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+        const lastDayOfPreviousYearMonth = new Date(now.getFullYear() - 1, now.getMonth() + 1, 0);
+        const previousYearMonthStart = formatDateLocal(firstDayOfPreviousYearMonth);
+        const previousYearMonthEnd = formatDateLocal(lastDayOfPreviousYearMonth);
+        
+        // Wrap in try-catch to prevent failures from breaking the dashboard
+        try {
+          const previousYearStatsResponse = await getEmissionStats({
+            start_date: previousYearMonthStart,
+            end_date: previousYearMonthEnd,
+          });
+          setPreviousYearStats(previousYearStatsResponse.data);
+        } catch (err) {
+          console.warn('Failed to fetch previous year stats:', err);
+          // Set to null so comparison card won't show
+          setPreviousYearStats(null);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load dashboard data. Please try again.');
@@ -87,6 +128,38 @@ function Dashboard() {
   // Capitalize first letter
   const capitalize = (str: string): string => {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  // Calculate percentage change between two values
+  const calculatePercentageChange = (current: number, previous: number): number | null => {
+    if (previous === 0) {
+      // If previous is 0, we can't calculate percentage, return null or handle specially
+      return current > 0 ? 100 : null; // 100% if current > 0, null if both are 0
+    }
+    return ((current - previous) / previous) * 100;
+  };
+
+  // Get trend indicator (↑ for increase, ↓ for decrease, → for no change)
+  const getTrendIndicator = (percentageChange: number | null): { symbol: string; color: string } => {
+    if (percentageChange === null) {
+      return { symbol: '→', color: '#6c757d' }; // No change or no data
+    }
+    if (percentageChange > 0) {
+      return { symbol: '↑', color: '#dc3545' }; // Increase (bad for emissions)
+    } else if (percentageChange < 0) {
+      return { symbol: '↓', color: '#28a745' }; // Decrease (good for emissions)
+    } else {
+      return { symbol: '→', color: '#6c757d' }; // No change
+    }
+  };
+
+  // Format percentage change for display
+  const formatPercentageChange = (percentageChange: number | null): string => {
+    if (percentageChange === null) {
+      return 'N/A';
+    }
+    const sign = percentageChange >= 0 ? '+' : '';
+    return `${sign}${formatNumber(Math.abs(percentageChange))}%`;
   };
 
   // Check if emission was edited
@@ -260,6 +333,154 @@ function Dashboard() {
             {monthStats?.total_records || 0}
           </div>
         </div>
+      </div>
+
+      {/* Comparison Cards */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+        gap: '20px', 
+        marginBottom: '30px' 
+      }}>
+        {/* Month-over-Month Comparison */}
+        {monthStats && previousMonthStats && (
+          (() => {
+            const currentValue = monthStats.total_co2_equivalent;
+            const previousValue = previousMonthStats.total_co2_equivalent;
+            const percentageChange = calculatePercentageChange(currentValue, previousValue);
+            const trend = getTrendIndicator(percentageChange);
+            return (
+              <div style={{
+                backgroundColor: '#fff',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#333', fontWeight: 'bold' }}>
+                  Month-over-Month
+                </h3>
+                <div style={{ marginBottom: '15px' }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>
+                    This Month
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#17a2b8' }}>
+                    {formatNumber(currentValue)} kg
+                  </div>
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>
+                    Last Month
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: 'normal', color: '#6c757d' }}>
+                    {formatNumber(previousValue)} kg
+                  </div>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px',
+                  backgroundColor: percentageChange && percentageChange < 0 ? '#d4edda' : percentageChange && percentageChange > 0 ? '#f8d7da' : '#e9ecef',
+                  borderRadius: '4px',
+                  border: `1px solid ${percentageChange && percentageChange < 0 ? '#c3e6cb' : percentageChange && percentageChange > 0 ? '#f5c6cb' : '#dee2e6'}`
+                }}>
+                  <span style={{ fontSize: '24px', color: trend.color, fontWeight: 'bold' }}>
+                    {trend.symbol}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '2px' }}>
+                      Change
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: trend.color }}>
+                      {formatPercentageChange(percentageChange)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()
+        )}
+
+        {/* Year-over-Year Comparison */}
+        {monthStats && previousYearStats && (
+          (() => {
+            const currentValue = monthStats.total_co2_equivalent;
+            const previousValue = previousYearStats.total_co2_equivalent;
+            const percentageChange = calculatePercentageChange(currentValue, previousValue);
+            const trend = getTrendIndicator(percentageChange);
+            const now = new Date();
+            const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const previousYearMonthName = new Date(now.getFullYear() - 1, now.getMonth()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            return (
+              <div style={{
+                backgroundColor: '#fff',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#333', fontWeight: 'bold' }}>
+                  Year-over-Year
+                </h3>
+                <div style={{ marginBottom: '15px' }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>
+                    {currentMonthName}
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#17a2b8' }}>
+                    {formatNumber(currentValue)} kg
+                  </div>
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>
+                    {previousYearMonthName}
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: 'normal', color: '#6c757d' }}>
+                    {formatNumber(previousValue)} kg
+                  </div>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px',
+                  backgroundColor: percentageChange && percentageChange < 0 ? '#d4edda' : percentageChange && percentageChange > 0 ? '#f8d7da' : '#e9ecef',
+                  borderRadius: '4px',
+                  border: `1px solid ${percentageChange && percentageChange < 0 ? '#c3e6cb' : percentageChange && percentageChange > 0 ? '#f5c6cb' : '#dee2e6'}`
+                }}>
+                  <span style={{ fontSize: '24px', color: trend.color, fontWeight: 'bold' }}>
+                    {trend.symbol}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '2px' }}>
+                      Change
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: trend.color }}>
+                      {formatPercentageChange(percentageChange)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()
+        )}
+
+        {/* Show message if no comparison data available */}
+        {(!monthStats || !previousMonthStats || !previousYearStats) && (
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '8px',
+            padding: '20px',
+            textAlign: 'center',
+            color: '#666',
+            gridColumn: '1 / -1'
+          }}>
+            <p style={{ margin: 0, fontSize: '14px' }}>
+              Comparison data will be available once you have emissions recorded for previous periods.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Emissions by Category */}

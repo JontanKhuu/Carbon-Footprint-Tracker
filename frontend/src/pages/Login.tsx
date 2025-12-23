@@ -25,12 +25,17 @@ function Login() {
       
       if (!user || !access_token || !refresh_token) {
         setError('Invalid response from server. Please try again.');
+        setIsLoading(false);
         return;
       }
       
+      // Login updates localStorage and state synchronously
       login(user, access_token, refresh_token);
+      
+      // Navigate immediately - isAuthenticated is now updated synchronously
       navigate('/dashboard');
     } catch (err) {
+      // Set error message from API response or default message
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
@@ -112,7 +117,18 @@ function Login() {
           </button>
         </div>
       </form>
-      {error && <p style={{ color: 'red', marginTop: '15px' }}>{error}</p>}
+      {error && (
+        <div style={{ 
+          color: 'red', 
+          marginTop: '15px',
+          padding: '10px',
+          backgroundColor: '#fee',
+          borderRadius: '4px',
+          border: '1px solid #fcc'
+        }}>
+          {error}
+        </div>
+      )}
       <p style={{ marginTop: '15px' }}>
         Don't have an account? <Link to="/registration">Sign up</Link>
       </p>

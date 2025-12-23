@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models.user import User
 from app.utils.jwt import generate_token, verify_token, token_required
+import re
 
 users_bp = Blueprint('users', __name__)
 
@@ -157,13 +158,21 @@ def create_user():
     # Collect all validation errors
     errors = {}
     
+    # Validate email format - only .com domains allowed
+    email = data.get('email', '').strip()
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$'
+    if not email or not re.match(email_pattern, email):
+        errors['email'] = 'Please enter a valid email address ending with .com'
+    elif len(email) > 254:  # RFC 5321 limit
+        errors['email'] = 'Email address is too long'
+    else:
+        # Check if email already exists (only if format is valid)
+        if User.query.filter_by(email=email).first():
+            errors['email'] = 'Email already exists'
+    
     # Check if username already exists
     if User.query.filter_by(username=data['username']).first():
         errors['username'] = 'Username already exists'
-    
-    # Check if email already exists
-    if User.query.filter_by(email=data['email']).first():
-        errors['email'] = 'Email already exists'
     
     # Validate password strength
     password = data.get('password', '')
@@ -263,9 +272,16 @@ def update_user(user_id):
             user.username = data['username']
         
         if 'email' in data and data['email'] != user.email:
-            if User.query.filter_by(email=data['email']).first():
+            email = data['email'].strip()
+            # Validate email format - only .com domains allowed
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$'
+            if not email or not re.match(email_pattern, email):
+                return jsonify({'error': 'Please enter a valid email address ending with .com'}), 400
+            if len(email) > 254:  # RFC 5321 limit
+                return jsonify({'error': 'Email address is too long'}), 400
+            if User.query.filter_by(email=email).first():
                 return jsonify({'error': 'Email already exists'}), 400
-            user.email = data['email']
+            user.email = email
         
         if 'password' in data:
             user.set_password(data['password'])

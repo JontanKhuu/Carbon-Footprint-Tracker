@@ -13,6 +13,21 @@ function Registration() {
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+    const validateEmail = (email: string): string | null => {
+        if (!email || !email.trim()) {
+            return 'Email is required';
+        }
+        // Only allow .com email addresses
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/;
+        if (!emailPattern.test(email.trim())) {
+            return 'Please enter a valid email address ending with .com';
+        }
+        if (email.length > 254) {
+            return 'Email address is too long';
+        }
+        return null;
+    };
+
     const validatePassword = (pwd: string): string[] => {
         const errors: string[] = [];
         
@@ -39,6 +54,14 @@ function Registration() {
         e.preventDefault();
         setError('');
         setFieldErrors({});
+
+        // Validate email format
+        const emailError = validateEmail(email);
+        if (emailError) {
+            setError('Please fix the errors below');
+            setFieldErrors({ email: emailError });
+            return;
+        }
 
         // Validate password strength
         const passwordErrors = validatePassword(password);
