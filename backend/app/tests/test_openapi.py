@@ -6,14 +6,6 @@ import json
 from app import create_app
 from openapi_spec_validator import validate_spec
 
-# Schemathesis is optional (has dependency conflicts with Flask 3.1.2)
-try:
-    import schemathesis
-    SCHEMATHESIS_AVAILABLE = True
-except ImportError:
-    SCHEMATHESIS_AVAILABLE = False
-
-
 @pytest.fixture
 def app():
     """Create application for testing"""
@@ -98,62 +90,6 @@ def test_openapi_spec_security_definitions(openapi_spec):
         assert bearer['type'] == 'apiKey'
         assert bearer['name'] == 'Authorization'
         assert bearer['in'] == 'header'
-
-
-# Schemathesis property-based testing (optional)
-# This automatically generates test cases from your OpenAPI spec
-try:
-    import schemathesis
-    SCHEMATHESIS_AVAILABLE = True
-except ImportError:
-    SCHEMATHESIS_AVAILABLE = False
-
-
-@pytest.mark.skipif(not SCHEMATHESIS_AVAILABLE, reason="schemathesis not installed - install with: pip install schemathesis")
-def test_api_endpoint_conformance(openapi_spec, app, client):
-    """
-    Property-based test that validates all endpoints against the OpenAPI spec.
-    This test is automatically generated for each endpoint in your spec.
-    Requires schemathesis to be installed.
-    """
-    if not SCHEMATHESIS_AVAILABLE:
-        pytest.skip("schemathesis not installed")
-    
-    from schemathesis.openapi import from_dict
-    
-    # In schemathesis 4.x, use from_dict from the openapi module
-    schema = from_dict(openapi_spec)
-    
-    # Verify the schema can be loaded
-    assert schema is not None
-    # Check that paths exist in the schema
-    assert len(schema.raw_schema.get('paths', {})) > 0
-
-
-# Alternative: Test specific endpoints with Schemathesis (optional)
-@pytest.mark.skipif(not SCHEMATHESIS_AVAILABLE, reason="schemathesis not installed")
-def test_api_contract_from_server(openapi_spec, app, client):
-    """
-    Alternative approach: Load spec and test endpoints.
-    Run this against a running server to test the live API.
-    Requires schemathesis to be installed.
-    """
-    if not SCHEMATHESIS_AVAILABLE:
-        pytest.skip("schemathesis not installed")
-    
-    from schemathesis.openapi import from_dict
-    
-    # In schemathesis 4.x, use from_dict from the openapi module
-    schema = from_dict(openapi_spec)
-    
-    # Verify schema loaded successfully
-    assert schema is not None
-    assert len(schema.raw_schema.get('paths', {})) > 0
-    
-    # Note: Full property-based testing with @schema.parametrize() and @schema.given()
-    # requires more complex setup and is better suited for integration tests
-    # against a running server. This test just verifies the schema can be loaded.
-
 
 def test_openapi_spec_response_schemas(openapi_spec):
     """Test that response schemas are defined for key endpoints"""

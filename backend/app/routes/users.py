@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
-from app import db
+from app import db, limiter
 from app.models.user import User
 from app.utils.jwt import generate_token, verify_token, token_required
+from flask_limiter.util import get_remote_address
 import re
 
 users_bp = Blueprint('users', __name__)
@@ -91,6 +92,7 @@ def get_user(user_id):
 
 
 @users_bp.route('', methods=['POST'])
+@limiter.limit("5 per minute", key_func=get_remote_address)
 def create_user():
     """
     Create New User
@@ -328,6 +330,7 @@ def delete_user(user_id):
     return jsonify({'message': 'User deleted successfully'}), 200
 
 @users_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute", key_func=get_remote_address)
 def login():
     """
     User Login
@@ -435,6 +438,7 @@ def login():
 
 
 @users_bp.route('/refresh', methods=['POST'])
+@limiter.limit("5 per minute", key_func=get_remote_address)
 def refresh_token():
     """
     Refresh Access Token

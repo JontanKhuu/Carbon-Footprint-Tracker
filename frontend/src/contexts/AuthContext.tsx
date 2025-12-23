@@ -1,4 +1,4 @@
-import { createContext, useState, useMemo, type ReactNode } from 'react';
+import { createContext, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../types';
 import { getAuthUser, setAuthUser, removeAuthUser, getAccessToken } from '../utils/auth';
@@ -15,30 +15,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize state from localStorage
   const [user, setUser] = useState<User | null>(() => getAuthUser());
-  const navigate = useNavigate();
-
-  // Calculate isAuthenticated from localStorage and user state
-  // Always check localStorage first as source of truth for immediate updates
-  const isAuthenticated = useMemo(() => {
+  // Initialize isAuthenticated from localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const token = getAccessToken();
     const storedUser = getAuthUser();
-    // Always use storedUser from localStorage as primary source of truth
-    // This ensures immediate updates when login() writes to localStorage
-    const currentUser = storedUser || user;
-    return currentUser !== null && token !== null;
-  }, [user]);
+    return storedUser !== null && token !== null;
+  });
+  const navigate = useNavigate();
 
   const login = (userData: User, accessToken: string, refreshToken: string) => {
     // Store in localStorage first (synchronous)
     setAuthUser(userData, accessToken, refreshToken);
     
-    // Update user state - this will trigger useMemo to recalculate isAuthenticated
+    // Update user state and isAuthenticated synchronously
+    // This ensures the state is updated before navigation
     setUser(userData);
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
     removeAuthUser();
     setUser(null);
+    setIsAuthenticated(false);
     navigate('/login');
   };
 

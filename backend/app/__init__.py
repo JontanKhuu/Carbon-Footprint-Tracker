@@ -1,8 +1,10 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flasgger import Swagger
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import config
 import sys
 import os
@@ -17,6 +19,13 @@ from swagger_config import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 db = SQLAlchemy()
 migrate = Migrate()
 cors = CORS()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["100 per hour"],
+    storage_uri=None,  # Use in-memory storage by default
+    strategy="fixed-window",
+    headers_enabled=True  # Enable rate limit headers in responses
+)
 
 
 def create_app(config_name='default'):
@@ -35,12 +44,26 @@ def create_app(config_name='default'):
         }
     })
     
+    # Initialize rate limiter
+    if app.config.get('RATELIMIT_ENABLED', True):
+        # Configure storage URL if provided (e.g., Redis for production)
+        storage_url = app.config.get('RATELIMIT_STORAGE_URL')
+        if storage_url:
+            limiter.storage_uri = storage_url
+        limiter.init_app(app)
+        app.logger.info("Rate limiting enabled")
+    else:
+        app.logger.info("Rate limiting disabled")
+    
     # Register blueprints FIRST (before Swagger initialization)
     from app.routes import emissions_bp, users_bp, health_bp
     # Register health blueprint with /api prefix to match Swagger basePath
     app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(emissions_bp, url_prefix='/api/emissions')
     app.register_blueprint(users_bp, url_prefix='/api/users')
+    
+    # Rate limiting is now applied via decorators in the route files
+    # No need for programmatic wrapping here
     
     # Register routes to serve custom Swagger CSS and JS
     @app.route('/static/swagger_custom.css')
@@ -107,6 +130,16 @@ def create_app(config_name='default'):
                 app.logger.warning(f"Failed to inject Swagger custom assets: {e}")
         
         return response
+    
+    # Add error handler for rate limit exceeded
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        """Handle rate limit exceeded errors"""
+        return jsonify({
+            'error': 'Rate limit exceeded. Please try again later.',
+            'message': str(e.description) if hasattr(e, 'description') else 'Too many requests',
+            'code': 'RATE_LIMIT_EXCEEDED'
+        }), 429
     
     # Create database tables if they don't exist
     # db.create_all() with checkfirst=True (default) is safe - it only creates
