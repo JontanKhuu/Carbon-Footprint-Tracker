@@ -17,21 +17,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => getAuthUser());
   const navigate = useNavigate();
 
-  // Compute isAuthenticated as a derived value
-  // This will automatically check localStorage if user state is null
+  // Calculate isAuthenticated from localStorage and user state
+  // Always check localStorage first as source of truth for immediate updates
   const isAuthenticated = useMemo(() => {
     const token = getAccessToken();
     const storedUser = getAuthUser();
-    // Use storedUser if user state is null (for initial load)
-    const currentUser = user || storedUser;
+    // Always use storedUser from localStorage as primary source of truth
+    // This ensures immediate updates when login() writes to localStorage
+    const currentUser = storedUser || user;
     return currentUser !== null && token !== null;
   }, [user]);
 
   const login = (userData: User, accessToken: string, refreshToken: string) => {
-    // Store in localStorage first
+    // Store in localStorage first (synchronous)
     setAuthUser(userData, accessToken, refreshToken);
     
-    // Update state - this will trigger re-render and update isAuthenticated
+    // Update user state - this will trigger useMemo to recalculate isAuthenticated
     setUser(userData);
   };
 
