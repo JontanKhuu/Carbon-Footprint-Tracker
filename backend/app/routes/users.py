@@ -250,51 +250,54 @@ def create_user():
         except Exception as seq_err:
             current_app.logger.warning(f"Could not check sequence after commit: {seq_err}")
         
-        # Force the session to expire all objects to ensure we're not using cached data
-        db.session.expire_all()
+        # Verify the commit actually persisted
+        # For PostgreSQL: use a separate connection to ensure we see committed data
+        # For SQLite: skip verification (SQLite transaction isolation is different and verification doesn't work the same way)
+        is_postgresql = 'postgresql' in str(db.engine.url).lower()
         
-        # Verify the commit actually persisted using a SEPARATE connection
-        # This ensures we're reading from the database, not the current transaction
-        # Create a completely new connection from the engine pool
-        with db.engine.connect() as separate_conn:
-            # Execute the query - the connection should see committed data
-            result = separate_conn.execute(
-                text("SELECT id, username, email, created_at, updated_at FROM users WHERE id = :user_id"),
-                {"user_id": user_id}
-            ).fetchone()
-            current_app.logger.info(f"Verification query result for ID {user_id}: {result}")
+        if is_postgresql:
+            # PostgreSQL: Use separate connection for verification
+            # Force the session to expire all objects to ensure we're not using cached data
+            db.session.expire_all()
             
-            # Also check if there's a user with the username we created
-            username_result = separate_conn.execute(
-                text("SELECT id, username, email FROM users WHERE username = :username"),
-                {"username": username}
-            ).fetchone()
-            current_app.logger.info(f"Verification query result for username '{username}': {username_result}")
+            with db.engine.connect() as separate_conn:
+                result = separate_conn.execute(
+                    text("SELECT id, username, email, created_at, updated_at FROM users WHERE id = :user_id"),
+                    {"user_id": user_id}
+                ).fetchone()
+                current_app.logger.info(f"Verification query result for ID {user_id}: {result}")
+                
+                if not result:
+                    current_app.logger.error(f"CRITICAL: User {user_id} ({username}) NOT FOUND in database after commit!")
+                    with db.engine.connect() as check_conn:
+                        all_users = check_conn.execute(text("SELECT id, username FROM users ORDER BY id")).fetchall()
+                        current_app.logger.error(f"All users in database: {all_users}")
+                    return jsonify({'error': 'Failed to create user - transaction was not persisted'}), 500
+                
+                if result[1] != username:
+                    current_app.logger.error(f"CRITICAL: Verification found wrong user! Expected username '{username}', got '{result[1]}'")
+                    return jsonify({'error': f'User creation verification failed - found different user (ID: {result[0]}, Username: {result[1]})'}), 500
+                
+                current_app.logger.info(f"Successfully verified user {user_id} ({username}) in database via separate connection")
+                
+                # Return the user data from the raw query result
+                # Note: Raw SQL returns datetime as strings, so we can return them directly
+                user_dict = {
+                    'id': result[0],
+                    'username': result[1],
+                    'email': result[2],
+                    'created_at': result[3] if result[3] else None,
+                    'updated_at': result[4] if result[4] else None
+                }
+        else:
+            # SQLite: Skip verification and return user object directly
+            # SQLite's transaction model is different and the separate connection verification doesn't work
+            # The commit should have worked, so we trust it and return the user data
+            current_app.logger.info(f"User created successfully for ID {user_id}, Username: {username} (SQLite - verification skipped)")
+            
+            # Return the user data from the model
+            user_dict = user.to_dict()
         
-        if not result:
-            current_app.logger.error(f"CRITICAL: User {user_id} ({username}) NOT FOUND in database after commit!")
-            # Double-check by querying all users
-            with db.engine.connect() as check_conn:
-                all_users = check_conn.execute(text("SELECT id, username FROM users ORDER BY id")).fetchall()
-                current_app.logger.error(f"All users in database: {all_users}")
-            return jsonify({'error': 'Failed to create user - transaction was not persisted'}), 500
-        
-        # Verify the result matches what we expect
-        if result[1] != username:
-            current_app.logger.error(f"CRITICAL: Verification found wrong user! Expected username '{username}', got '{result[1]}'")
-            return jsonify({'error': f'User creation verification failed - found different user (ID: {result[0]}, Username: {result[1]})'}), 500
-        
-        current_app.logger.info(f"Successfully verified user {user_id} ({username}) in database via separate connection")
-        
-        # Return the user data from the raw query result
-        # Note: Raw SQL returns datetime as strings, so we can return them directly
-        user_dict = {
-            'id': result[0],
-            'username': result[1],
-            'email': result[2],
-            'created_at': result[3] if result[3] else None,
-            'updated_at': result[4] if result[4] else None
-        }
         return jsonify(user_dict), 201
     except Exception as e:
         # Ensure session is rolled back on any error

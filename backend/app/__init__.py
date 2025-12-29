@@ -5,6 +5,14 @@ from flask_cors import CORS
 from flasgger import Swagger
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+
+def get_rate_limit_key():
+    """Custom key function that exempts OPTIONS requests from rate limiting"""
+    from flask import request
+    if request.method == 'OPTIONS':
+        # Return None to exempt from rate limiting
+        return None
+    return get_remote_address()
 from config import config
 import sys
 import os
@@ -26,7 +34,7 @@ db = SQLAlchemy(
 migrate = Migrate()
 cors = CORS()
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_rate_limit_key,
     default_limits=["100 per hour"],
     storage_uri=None,  # Use in-memory storage by default
     strategy="fixed-window",
@@ -80,7 +88,7 @@ def create_app(config_name='default'):
         if storage_url:
             limiter.storage_uri = storage_url
         limiter.init_app(app)
-        app.logger.info("Rate limiting enabled")
+        app.logger.info("Rate limiting enabled (OPTIONS requests exempt)")
     else:
         app.logger.info("Rate limiting disabled")
     
