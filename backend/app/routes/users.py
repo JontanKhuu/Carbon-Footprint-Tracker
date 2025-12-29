@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app import db, limiter
 from app.models.user import User
 from app.utils.jwt import generate_token, verify_token, token_required
@@ -202,18 +202,105 @@ def create_user():
         }), 400
     
     try:
+        current_app.logger.info(f"Creating user: {data['username']}")
+        
+        # Check sequence before creating user (PostgreSQL only)
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as seq_conn:
+                seq_result = seq_conn.execute(text("SELECT last_value, is_called FROM users_id_seq")).fetchone()
+                current_app.logger.info(f"Sequence before user creation: last_value={seq_result[0]}, is_called={seq_result[1]}")
+        except Exception as seq_err:
+            current_app.logger.warning(f"Could not check sequence (might be SQLite or other DB): {seq_err}")
+        
         user = User(
             username=data['username'],
             email=data['email']
         )
         user.set_password(data['password'])
         
-        db.session.add(user)
-        db.session.commit()
+        current_app.logger.info(f"User object created, ID before add: {getattr(user, 'id', 'None')}")
         
-        return jsonify(user.to_dict()), 201
+        db.session.add(user)
+        current_app.logger.info(f"User added to session, ID after add: {getattr(user, 'id', 'None')}")
+        
+        current_app.logger.debug("Flushing to get ID from database...")
+        db.session.flush()  # Flush to get the ID from database
+        user_id = user.id
+        username = user.username
+        current_app.logger.info(f"User flushed with ID: {user_id}, Username: {username}")
+        
+        # Check sequence after flush (PostgreSQL only)
+        try:
+            with db.engine.connect() as seq_conn:
+                seq_result = seq_conn.execute(text("SELECT last_value, is_called FROM users_id_seq")).fetchone()
+                current_app.logger.info(f"Sequence after flush: last_value={seq_result[0]}, is_called={seq_result[1]}")
+        except Exception as seq_err:
+            current_app.logger.warning(f"Could not check sequence after flush: {seq_err}")
+        
+        # Commit the transaction - ensure it's fully committed
+        db.session.commit()
+        current_app.logger.info(f"Transaction committed for user ID: {user_id}, Username: {username}")
+        
+        # Check sequence after commit (PostgreSQL only)
+        try:
+            with db.engine.connect() as seq_conn:
+                seq_result = seq_conn.execute(text("SELECT last_value, is_called FROM users_id_seq")).fetchone()
+                current_app.logger.info(f"Sequence after commit: last_value={seq_result[0]}, is_called={seq_result[1]}")
+        except Exception as seq_err:
+            current_app.logger.warning(f"Could not check sequence after commit: {seq_err}")
+        
+        # Force the session to expire all objects to ensure we're not using cached data
+        db.session.expire_all()
+        
+        # Verify the commit actually persisted using a SEPARATE connection
+        # This ensures we're reading from the database, not the current transaction
+        # Create a completely new connection from the engine pool
+        with db.engine.connect() as separate_conn:
+            # Execute the query - the connection should see committed data
+            result = separate_conn.execute(
+                text("SELECT id, username, email, created_at, updated_at FROM users WHERE id = :user_id"),
+                {"user_id": user_id}
+            ).fetchone()
+            current_app.logger.info(f"Verification query result for ID {user_id}: {result}")
+            
+            # Also check if there's a user with the username we created
+            username_result = separate_conn.execute(
+                text("SELECT id, username, email FROM users WHERE username = :username"),
+                {"username": username}
+            ).fetchone()
+            current_app.logger.info(f"Verification query result for username '{username}': {username_result}")
+        
+        if not result:
+            current_app.logger.error(f"CRITICAL: User {user_id} ({username}) NOT FOUND in database after commit!")
+            # Double-check by querying all users
+            with db.engine.connect() as check_conn:
+                all_users = check_conn.execute(text("SELECT id, username FROM users ORDER BY id")).fetchall()
+                current_app.logger.error(f"All users in database: {all_users}")
+            return jsonify({'error': 'Failed to create user - transaction was not persisted'}), 500
+        
+        # Verify the result matches what we expect
+        if result[1] != username:
+            current_app.logger.error(f"CRITICAL: Verification found wrong user! Expected username '{username}', got '{result[1]}'")
+            return jsonify({'error': f'User creation verification failed - found different user (ID: {result[0]}, Username: {result[1]})'}), 500
+        
+        current_app.logger.info(f"Successfully verified user {user_id} ({username}) in database via separate connection")
+        
+        # Return the user data from the raw query result
+        # Note: Raw SQL returns datetime as strings, so we can return them directly
+        user_dict = {
+            'id': result[0],
+            'username': result[1],
+            'email': result[2],
+            'created_at': result[3] if result[3] else None,
+            'updated_at': result[4] if result[4] else None
+        }
+        return jsonify(user_dict), 201
     except Exception as e:
-        db.session.rollback()
+        # Ensure session is rolled back on any error
+        if db.session.is_active:
+            db.session.rollback()
+        current_app.logger.error(f"Error creating user: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 

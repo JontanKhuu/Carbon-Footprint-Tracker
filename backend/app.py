@@ -3,10 +3,18 @@ from app import create_app, db
 from flask_migrate import upgrade
 
 # Get environment from environment variable or default to development
-config_name = os.environ.get('FLASK_ENV', 'development').lower()
-if config_name == 'production':
+# Note: FLASK_ENV can be 'testing' which uses SQLite, but we want to use the DATABASE_URL
+# So we check if DATABASE_URL is set and use 'development' config if it points to PostgreSQL
+flask_env = os.environ.get('FLASK_ENV', 'development').lower()
+database_url = os.environ.get('DATABASE_URL', '')
+
+# If DATABASE_URL is set and points to PostgreSQL, use development config
+# Otherwise, respect FLASK_ENV setting
+if database_url and 'postgresql' in database_url.lower():
+    config_name = 'development'
+elif flask_env == 'production':
     config_name = 'production'
-elif config_name == 'testing':
+elif flask_env == 'testing':
     config_name = 'testing'
 else:
     config_name = 'development'
