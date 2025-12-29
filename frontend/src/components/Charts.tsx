@@ -984,9 +984,9 @@ function Charts({ emissions, onCategoryFilter, onDateRangeFilter }: ChartsProps)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } else {
       const [year, month] = dateStr.split('-');
-      // Use shorter format: "MMM YY" instead of "MMM YYYY"
+      // Monthly view: show only month name (no year)
       const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      return date.toLocaleDateString('en-US', { month: 'short' });
     }
   };
 
