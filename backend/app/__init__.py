@@ -16,7 +16,13 @@ if backend_dir not in sys.path:
 from swagger_config import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 
 # Initialize extensions
-db = SQLAlchemy()
+# Note: 'autocommit' is deprecated in SQLAlchemy 2.0, removed from session_options
+db = SQLAlchemy(
+    session_options={
+        'autoflush': True,
+        'expire_on_commit': False
+    }
+)
 migrate = Migrate()
 cors = CORS()
 limiter = Limiter(
@@ -36,6 +42,29 @@ def create_app(config_name='default'):
     # Initialize extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Override Flask-SQLAlchemy's teardown handler to ensure commits persist
+    # The default teardown just removes the session, but we want to ensure
+    # any pending commits are flushed before teardown
+    @app.teardown_appcontext
+    def custom_teardown_session(exception):
+        """Custom teardown handler that ensures commits are persisted"""
+        try:
+            # If there's an exception, rollback
+            if exception:
+                db.session.rollback()
+            else:
+                # Ensure any pending changes are committed
+                # This is a safety measure - commits should already be done in routes
+                if db.session.is_active:
+                    try:
+                        db.session.commit()
+                    except Exception as e:
+                        app.logger.warning(f"Error during teardown commit: {e}")
+                        db.session.rollback()
+        finally:
+            # Remove the session (this is what Flask-SQLAlchemy does by default)
+            db.session.remove()
     cors.init_app(app, resources={
         r"/api/*": {
             "origins": app.config['CORS_ORIGINS'],
