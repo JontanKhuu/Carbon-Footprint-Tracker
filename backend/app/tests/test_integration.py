@@ -126,6 +126,15 @@ def test_full_user_workflow(client, app):
     with app.app_context():
         user = User.query.get(user_id)
         if user:
+            # Delete all emission history records for this user's emissions first
+            # (PostgreSQL foreign key constraint)
+            user_emissions = Emission.query.filter_by(user_id=user_id).all()
+            for emission in user_emissions:
+                EmissionHistory.query.filter_by(emission_id=emission.id).delete()
+            # Delete all emissions for this user
+            Emission.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            # Now safe to delete the user
             db.session.delete(user)
             db.session.commit()
 
@@ -232,6 +241,15 @@ def test_multi_user_scenarios(client, app):
     
     # Cleanup
     with app.app_context():
+        # Delete emission history records first (PostgreSQL foreign key constraint)
+        EmissionHistory.query.filter_by(emission_id=emission1_id).delete()
+        EmissionHistory.query.filter_by(emission_id=emission2_id).delete()
+        db.session.commit()
+        # Delete emissions
+        Emission.query.filter_by(id=emission1_id).delete()
+        Emission.query.filter_by(id=emission2_id).delete()
+        db.session.commit()
+        # Now safe to delete users
         user1 = User.query.get(user1_id)
         user2 = User.query.get(user2_id)
         if user1:
@@ -414,6 +432,15 @@ def test_database_transaction_rollback_on_error(client, app):
     with app.app_context():
         user = User.query.get(user_id)
         if user:
+            # Delete all emission history records for this user's emissions first
+            # (PostgreSQL foreign key constraint)
+            user_emissions = Emission.query.filter_by(user_id=user_id).all()
+            for emission in user_emissions:
+                EmissionHistory.query.filter_by(emission_id=emission.id).delete()
+            # Delete all emissions for this user
+            Emission.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            # Now safe to delete the user
             db.session.delete(user)
             db.session.commit()
 
@@ -464,6 +491,15 @@ def test_database_transaction_commit_on_success(client, app):
     with app.app_context():
         user = User.query.get(user_id)
         if user:
+            # Delete all emission history records for this user's emissions first
+            # (PostgreSQL foreign key constraint)
+            user_emissions = Emission.query.filter_by(user_id=user_id).all()
+            for emission in user_emissions:
+                EmissionHistory.query.filter_by(emission_id=emission.id).delete()
+            # Delete all emissions for this user
+            Emission.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            # Now safe to delete the user
             db.session.delete(user)
             db.session.commit()
 
@@ -537,6 +573,16 @@ def test_database_transaction_concurrent_requests(client, app):
     
     # Cleanup
     with app.app_context():
+        # Delete all emission history records first (PostgreSQL foreign key constraint)
+        for emission_id in emission_ids:
+            if emission_id is not None:
+                EmissionHistory.query.filter_by(emission_id=emission_id).delete()
+        # Delete all emissions
+        for emission_id in emission_ids:
+            if emission_id is not None:
+                Emission.query.filter_by(id=emission_id).delete()
+        db.session.commit()
+        # Now safe to delete users
         for user_id in user_ids:
             user = User.query.get(user_id)
             if user:
@@ -626,6 +672,15 @@ def test_full_workflow_data_persistence(client, app):
     with app.app_context():
         user = User.query.get(user_id)
         if user:
+            # Delete all emission history records for this user's emissions first
+            # (PostgreSQL foreign key constraint)
+            user_emissions = Emission.query.filter_by(user_id=user_id).all()
+            for emission in user_emissions:
+                EmissionHistory.query.filter_by(emission_id=emission.id).delete()
+            # Delete all emissions for this user
+            Emission.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            # Now safe to delete the user
             db.session.delete(user)
             db.session.commit()
 
