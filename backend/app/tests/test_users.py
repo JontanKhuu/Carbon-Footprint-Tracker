@@ -450,3 +450,426 @@ def test_jwt_token_refresh_flow(client, test_user_for_auth):
     refresh_response2 = client.post('/api/users/refresh', json={'refresh_token': new_refresh_token})
     assert refresh_response2.status_code == 200
 
+
+# ==================== Task 18: Expand User Management Tests ====================
+
+def test_get_single_user_success(client, app):
+    """Test GET /users/<id> - successful retrieval"""
+    # Create a test user
+    with app.app_context():
+        user = User(username='singleuser', email='singleuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+    
+    response = client.get(f'/api/users/{user_id}')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['id'] == user_id
+    assert data['username'] == 'singleuser'
+    assert data['email'] == 'singleuser@example.com'
+    assert 'password' not in data
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_get_single_user_not_found(client):
+    """Test GET /users/<id> - 404 for non-existent user"""
+    response = client.get('/api/users/99999')
+    assert response.status_code == 404
+
+
+def test_update_user_success(client, app):
+    """Test PUT /users/<id> - successful update"""
+    # Create a test user
+    with app.app_context():
+        user = User(username='updateuser', email='updateuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+    
+    update_data = {
+        'username': 'updateduser',
+        'email': 'updateduser@example.com',
+        'password': 'NewPass123!'
+    }
+    
+    response = client.put(f'/api/users/{user_id}', json=update_data)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['username'] == 'updateduser'
+    assert data['email'] == 'updateduser@example.com'
+    
+    # Verify password was updated by trying to login
+    login_data = {
+        'usernameOrEmail': 'updateduser',
+        'password': 'NewPass123!'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_update_user_partial(client, app):
+    """Test PUT /users/<id> - partial updates"""
+    # Create a test user
+    with app.app_context():
+        user = User(username='partialuser', email='partialuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+        original_email = user.email
+    
+    # Update only username
+    update_data = {'username': 'newpartialuser'}
+    response = client.put(f'/api/users/{user_id}', json=update_data)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['username'] == 'newpartialuser'
+    assert data['email'] == original_email  # Email should remain unchanged
+    
+    # Update only email
+    update_data = {'email': 'newpartial@example.com'}
+    response = client.put(f'/api/users/{user_id}', json=update_data)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['email'] == 'newpartial@example.com'
+    assert data['username'] == 'newpartialuser'  # Username should remain unchanged
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_update_user_not_found(client):
+    """Test PUT /users/<id> - 404 for non-existent user"""
+    update_data = {'username': 'newname'}
+    response = client.put('/api/users/99999', json=update_data)
+    assert response.status_code == 404
+
+
+def test_update_user_invalid_email(client, app):
+    """Test PUT /users/<id> - validation errors (invalid email)"""
+    # Create a test user
+    with app.app_context():
+        user = User(username='invalidemail', email='invalidemail@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+    
+    # Test invalid email format (not ending with .com)
+    update_data = {'email': 'invalid@example.org'}
+    response = client.put(f'/api/users/{user_id}', json=update_data)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+    assert '.com' in data['error'].lower()
+    
+    # Test invalid email format (no @)
+    update_data = {'email': 'invalidemail'}
+    response = client.put(f'/api/users/{user_id}', json=update_data)
+    assert response.status_code == 400
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_update_user_duplicate_username(client, app):
+    """Test PUT /users/<id> - duplicate username handling"""
+    # Create two test users
+    with app.app_context():
+        user1 = User(username='user1', email='user1@example.com')
+        user1.set_password('testpass123')
+        user2 = User(username='user2', email='user2@example.com')
+        user2.set_password('testpass123')
+        db.session.add_all([user1, user2])
+        db.session.commit()
+        db.session.refresh(user1)
+        db.session.refresh(user2)
+        user1_id = user1.id
+        user2_id = user2.id
+    
+    # Try to update user2's username to user1's username
+    update_data = {'username': 'user1'}
+    response = client.put(f'/api/users/{user2_id}', json=update_data)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+    assert 'username' in data['error'].lower() or 'exists' in data['error'].lower()
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user1)
+        db.session.delete(user2)
+        db.session.commit()
+
+
+def test_update_user_duplicate_email(client, app):
+    """Test PUT /users/<id> - duplicate email handling"""
+    # Create two test users
+    with app.app_context():
+        user1 = User(username='emailuser1', email='emailuser1@example.com')
+        user1.set_password('testpass123')
+        user2 = User(username='emailuser2', email='emailuser2@example.com')
+        user2.set_password('testpass123')
+        db.session.add_all([user1, user2])
+        db.session.commit()
+        db.session.refresh(user1)
+        db.session.refresh(user2)
+        user1_id = user1.id
+        user2_id = user2.id
+    
+    # Try to update user2's email to user1's email
+    update_data = {'email': 'emailuser1@example.com'}
+    response = client.put(f'/api/users/{user2_id}', json=update_data)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+    assert 'email' in data['error'].lower() or 'exists' in data['error'].lower()
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user1)
+        db.session.delete(user2)
+        db.session.commit()
+
+
+def test_delete_user_success(client, app):
+    """Test DELETE /users/<id> - successful deletion"""
+    # Create a test user
+    with app.app_context():
+        user = User(username='deleteuser', email='deleteuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+    
+    response = client.delete(f'/api/users/{user_id}')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'message' in data
+    
+    # Verify user is deleted
+    with app.app_context():
+        deleted_user = User.query.get(user_id)
+        assert deleted_user is None
+
+
+def test_delete_user_not_found(client):
+    """Test DELETE /users/<id> - 404 for non-existent user"""
+    response = client.delete('/api/users/99999')
+    assert response.status_code == 404
+
+
+def test_delete_user_cascade_emissions(client, app):
+    """Test DELETE /users/<id> - cascade deletion (associated emissions)"""
+    from app.models.emission import Emission
+    from datetime import date
+    
+    # Create a test user with emissions
+    with app.app_context():
+        user = User(username='cascadeuser', email='cascadeuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        user_id = user.id
+        
+        # Create emissions for this user
+        emission1 = Emission(
+            user_id=user_id,
+            category='transport',
+            activity='car_drive',
+            amount=100,
+            unit='km',
+            co2_equivalent=20.5,
+            emission_factor=0.205,
+            date=date(2024, 1, 15)
+        )
+        emission2 = Emission(
+            user_id=user_id,
+            category='energy',
+            activity='electricity',
+            amount=50,
+            unit='kWh',
+            co2_equivalent=15.0,
+            emission_factor=0.3,
+            date=date(2024, 1, 16)
+        )
+        db.session.add_all([emission1, emission2])
+        db.session.commit()
+        emission1_id = emission1.id
+        emission2_id = emission2.id
+    
+    # Delete the user
+    response = client.delete(f'/api/users/{user_id}')
+    assert response.status_code == 200
+    
+    # Verify user is deleted
+    with app.app_context():
+        deleted_user = User.query.get(user_id)
+        assert deleted_user is None
+        
+        # Verify emissions are also deleted (cascade)
+        deleted_emission1 = Emission.query.get(emission1_id)
+        deleted_emission2 = Emission.query.get(emission2_id)
+        assert deleted_emission1 is None
+        assert deleted_emission2 is None
+
+
+def test_user_validation_email_format(client):
+    """Test user validation - email format validation"""
+    # Test invalid email formats (limit to avoid rate limiting)
+    invalid_emails = [
+        'notanemail',
+        'user@domain.org',  # Not .com
+        '@domain.com',  # Missing local part
+    ]
+    
+    for invalid_email in invalid_emails:
+        user_data = {
+            'username': f'testuser_{invalid_email.replace("@", "_").replace(".", "_")[:15]}',
+            'email': invalid_email,
+            'password': 'ValidPass123!'
+        }
+        response = client.post('/api/users', json=user_data)
+        # May get 400 (validation error) or 429 (rate limit) - both are acceptable
+        assert response.status_code in [400, 429]
+        if response.status_code == 400:
+            data = response.get_json()
+            assert 'error' in data or 'errors' in data
+
+
+def test_user_validation_password_strength(client):
+    """Test user validation - password strength requirements"""
+    # Test weak passwords (limit to avoid rate limiting)
+    weak_passwords = [
+        'short',  # Too short
+        'nouppercase123!',  # No uppercase
+        'NOLOWERCASE123!',  # No lowercase
+        'NoNumbers!',  # No numbers
+    ]
+    
+    for weak_password in weak_passwords:
+        user_data = {
+            'username': f'testuser_{weak_password[:10].replace("!", "_")}',
+            'email': f'test_{weak_password[:5].replace("!", "_")}@example.com',
+            'password': weak_password
+        }
+        response = client.post('/api/users', json=user_data)
+        # May get 400 (validation error) or 429 (rate limit) - both are acceptable
+        assert response.status_code in [400, 429]
+        if response.status_code == 400:
+            data = response.get_json()
+            assert 'error' in data or 'errors' in data
+            if 'errors' in data and 'password' in data['errors']:
+                password_error = data['errors']['password']
+                assert isinstance(password_error, str)
+                assert any(
+                    req in password_error.lower() 
+                    for req in ['uppercase', 'lowercase', 'number', 'special', '8', 'character']
+                )
+
+
+def test_user_validation_duplicate_username(client, app):
+    """Test user validation - duplicate username handling"""
+    # Create a user first
+    with app.app_context():
+        user = User(username='duplicateuser', email='duplicateuser@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+    
+    # Try to create another user with same username
+    user_data = {
+        'username': 'duplicateuser',
+        'email': 'different@example.com',
+        'password': 'ValidPass123!'
+    }
+    response = client.post('/api/users', json=user_data)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data or 'errors' in data
+    if 'errors' in data:
+        assert 'username' in data['errors']
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_user_validation_duplicate_email(client, app):
+    """Test user validation - duplicate email handling"""
+    # Create a user first
+    with app.app_context():
+        user = User(username='duplicateemail', email='duplicateemail@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+    
+    # Try to create another user with same email
+    user_data = {
+        'username': 'differentuser',
+        'email': 'duplicateemail@example.com',
+        'password': 'ValidPass123!'
+    }
+    response = client.post('/api/users', json=user_data)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data or 'errors' in data
+    if 'errors' in data:
+        assert 'email' in data['errors']
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
+
+
+def test_user_validation_required_fields(client):
+    """Test user validation - required field validation"""
+    # Missing username
+    response = client.post('/api/users', json={
+        'email': 'test@example.com',
+        'password': 'ValidPass123!'
+    })
+    assert response.status_code == 400
+    
+    # Missing email
+    response = client.post('/api/users', json={
+        'username': 'testuser',
+        'password': 'ValidPass123!'
+    })
+    assert response.status_code == 400
+    
+    # Missing password
+    response = client.post('/api/users', json={
+        'username': 'testuser',
+        'email': 'test@example.com'
+    })
+    assert response.status_code == 400
+    
+    # Missing all fields
+    response = client.post('/api/users', json={})
+    assert response.status_code == 400
+
