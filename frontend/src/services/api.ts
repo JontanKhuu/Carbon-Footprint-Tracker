@@ -153,3 +153,25 @@ export const deleteEmission = (emissionId: number) =>
 export const getEmissionHistory = (emissionId: number) => 
   api.get(`/emissions/${emissionId}/history`);
 
+// Export emissions
+export const exportEmissions = async (format: 'csv' | 'json', filters?: EmissionFilters): Promise<Blob> => {
+  const params = new URLSearchParams();
+  params.append('format', format);
+  
+  if (filters?.category) {
+    params.append('category', filters.category);
+  }
+  if (filters?.start_date) {
+    params.append('start_date', filters.start_date);
+  }
+  if (filters?.end_date) {
+    params.append('end_date', filters.end_date);
+  }
+  
+  const response = await api.get(`/emissions/export?${params.toString()}`, {
+    responseType: 'blob', // Important for file downloads
+  });
+  
+  return response.data;
+};
+
