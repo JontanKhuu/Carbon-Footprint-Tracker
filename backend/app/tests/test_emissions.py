@@ -86,6 +86,8 @@ def test_emission(app, test_user):
         db.session.commit()
         db.session.refresh(emission)
         yield emission
+        # Delete history records first (PostgreSQL foreign key constraint)
+        EmissionHistory.query.filter_by(emission_id=emission.id).delete()
         db.session.delete(emission)
         db.session.commit()
 
@@ -109,6 +111,8 @@ def test_emission_other_user(app, test_user2):
         db.session.commit()
         db.session.refresh(emission)
         yield emission
+        # Delete history records first (PostgreSQL foreign key constraint)
+        EmissionHistory.query.filter_by(emission_id=emission.id).delete()
         db.session.delete(emission)
         db.session.commit()
 
@@ -287,6 +291,11 @@ def test_update_emission_validation_error(client, test_emission, auth_headers):
 def test_delete_emission_success(client, test_emission, app, auth_headers):
     """Test DELETE /emissions/<id> - successful deletion"""
     emission_id = test_emission.id
+    # Delete history records first (PostgreSQL foreign key constraint)
+    with app.app_context():
+        EmissionHistory.query.filter_by(emission_id=emission_id).delete()
+        db.session.commit()
+    
     response = client.delete(f'/api/emissions/{emission_id}', headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()

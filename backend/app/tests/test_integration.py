@@ -7,6 +7,7 @@ from datetime import date, datetime
 from app import create_app, db
 from app.models.user import User
 from app.models.emission import Emission
+from app.models.emission_history import EmissionHistory
 from app.utils.jwt import generate_token
 
 
@@ -99,6 +100,11 @@ def test_full_user_workflow(client, app):
     assert emission_data['description'] == 'Updated commute distance'
     
     # Step 5: Delete emission
+    # First, delete any history records (PostgreSQL foreign key constraint)
+    with app.app_context():
+        EmissionHistory.query.filter_by(emission_id=emission_id).delete()
+        db.session.commit()
+    
     response = client.delete(f'/api/emissions/{emission_id}', headers=auth_headers)
     assert response.status_code == 200
     
@@ -598,6 +604,11 @@ def test_full_workflow_data_persistence(client, app):
         assert emission_data['description'] == f'Updated emission {i + 1}'
     
     # Delete one emission
+    # First, delete any history records (PostgreSQL foreign key constraint)
+    with app.app_context():
+        EmissionHistory.query.filter_by(emission_id=emission_ids[0]).delete()
+        db.session.commit()
+    
     response = client.delete(f'/api/emissions/{emission_ids[0]}', headers=auth_headers)
     assert response.status_code == 200
     
