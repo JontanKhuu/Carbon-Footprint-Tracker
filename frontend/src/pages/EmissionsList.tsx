@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { getEmissions, deleteEmission, getEmissionHistory } from '../services/api';
+import { getEmissions, deleteEmission, getEmissionHistory, exportEmissions } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import type { Emission, EmissionFilters, EmissionHistoryEntry } from '../types';
 
@@ -47,6 +47,9 @@ function EmissionsList() {
   const [emissionHistoryId, setEmissionHistoryId] = useState<number | null>(null);
   const [history, setHistory] = useState<EmissionHistoryEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch emissions
   useEffect(() => {
@@ -213,6 +216,43 @@ function EmissionsList() {
     setCategoryInput('');
     setStartDateInput('');
     setEndDateInput('');
+  };
+  
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      setIsExporting(true);
+      setError('');
+      
+      // Build filters object from current filter state
+      const filters: EmissionFilters = {};
+      if (selectedCategory) {
+        filters.category = selectedCategory;
+      }
+      if (startDate) {
+        filters.start_date = startDate;
+      }
+      if (endDate) {
+        filters.end_date = endDate;
+      }
+      
+      // Call export API
+      const blob = await exportEmissions(format, filters);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `emissions_export_${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting emissions:', err);
+      setError('Failed to export emissions. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
   
   // Apply all filters when button is clicked
@@ -398,7 +438,7 @@ function EmissionsList() {
             />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={applyFilters}
             style={{
@@ -428,6 +468,40 @@ function EmissionsList() {
             }}
           >
             Clear Filters
+          </button>
+          <button
+            onClick={() => handleExport('csv')}
+            disabled={isExporting}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: isExporting ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isExporting ? 'not-allowed' : 'pointer',
+              fontWeight: '500',
+              opacity: isExporting ? 0.6 : 1
+            }}
+          >
+            {isExporting ? 'Exporting...' : 'Export CSV'}
+          </button>
+          <button
+            onClick={() => handleExport('json')}
+            disabled={isExporting}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: isExporting ? '#6c757d' : '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isExporting ? 'not-allowed' : 'pointer',
+              fontWeight: '500',
+              opacity: isExporting ? 0.6 : 1
+            }}
+          >
+            {isExporting ? 'Exporting...' : 'Export JSON'}
           </button>
         </div>
       </div>

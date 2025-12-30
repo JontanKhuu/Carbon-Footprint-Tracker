@@ -1,9 +1,12 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from app import db
 from app.models.emission import Emission
 from app.models.emission_history import EmissionHistory
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import func
+import csv
+import io
+import json
 from app.services.emission_calculator import (
     calculate_co2_equivalent,
     is_activity_supported,
@@ -821,4 +824,155 @@ def delete_emission(emission_id, current_user):
     db.session.commit()
     
     return jsonify({'message': 'Emission deleted successfully'}), 200
+
+
+@emissions_bp.route('/export', methods=['GET'])
+@token_required
+def export_emissions(current_user):
+    """
+    Export Emissions
+    ---
+    tags:
+      - Emissions
+    summary: Export emissions data in CSV or JSON format
+    description: Exports all emissions for the authenticated user with optional filtering. Supports CSV and JSON formats.
+    security:
+      - Bearer: []
+    parameters:
+      - name: format
+        in: query
+        type: string
+        enum: [csv, json]
+        default: csv
+        required: false
+        description: Export format (csv or json)
+      - name: category
+        in: query
+        type: string
+        required: false
+        description: Filter by category (e.g., transport, energy, food)
+      - name: start_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter emissions from this date (ISO format)
+      - name: end_date
+        in: query
+        type: string
+        format: date
+        required: false
+        description: Filter emissions until this date (ISO format)
+    responses:
+      200:
+        description: Exported emissions data (CSV or JSON format based on format parameter)
+        schema:
+          type: string
+          description: CSV file content if format=csv, JSON object if format=json
+        examples:
+          csv: "ID,Category,Activity,Amount,Unit,CO2 Equivalent (kg),Emission Factor,Date,Description,Created At,Updated At\n1,transport,car_drive,100,km,20.5,0.205,2025-01-15,Driving to work,2025-01-15T10:00:00,2025-01-15T10:00:00"
+          json: '{"metadata": {"export_date": "2025-01-15T10:00:00", "user": {"id": 1, "username": "user", "email": "user@example.com"}, "filters": {}, "total_records": 1}, "emissions": [{"id": 1, "category": "transport", "activity": "car_drive", "amount": 100, "unit": "km", "co2_equivalent": 20.5, "emission_factor": 0.205, "date": "2025-01-15", "description": "Driving to work", "created_at": "2025-01-15T10:00:00", "updated_at": "2025-01-15T10:00:00"}]}'
+      400:
+        description: Bad request - Invalid format parameter
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: 'Invalid format. Use "csv" or "json"'
+      401:
+        description: Unauthorized - Invalid or missing token
+    """
+    # Get format parameter (default to csv)
+    export_format = request.args.get('format', 'csv').lower()
+    if export_format not in ['csv', 'json']:
+        return jsonify({'error': 'Invalid format. Use "csv" or "json"'}), 400
+    
+    # Use same filtering logic as get_emissions
+    user_id = current_user.id
+    category = request.args.get('category')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    query = Emission.query.filter_by(user_id=user_id)
+    
+    if category:
+        query = query.filter_by(category=category)
+    if start_date:
+        query = query.filter(Emission.date >= datetime.fromisoformat(start_date).date())
+    if end_date:
+        query = query.filter(Emission.date <= datetime.fromisoformat(end_date).date())
+    
+    emissions = query.order_by(Emission.date.desc()).all()
+    
+    if export_format == 'csv':
+        # Create CSV export
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header row
+        writer.writerow([
+            'ID', 'Category', 'Activity', 'Amount', 'Unit', 
+            'CO2 Equivalent (kg)', 'Emission Factor', 'Date', 
+            'Description', 'Created At', 'Updated At'
+        ])
+        
+        # Write data rows
+        for emission in emissions:
+            writer.writerow([
+                emission.id,
+                emission.category,
+                emission.activity,
+                emission.amount,
+                emission.unit,
+                emission.co2_equivalent,
+                emission.emission_factor,
+                emission.date.isoformat() if emission.date else '',
+                emission.description or '',
+                emission.created_at.isoformat() if emission.created_at else '',
+                emission.updated_at.isoformat() if emission.updated_at else ''
+            ])
+        
+        # Create response with proper CSV headers
+        response = Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename=emissions_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+            }
+        )
+        return response
+    
+    else:  # JSON format
+        # Prepare metadata
+        metadata = {
+            'export_date': datetime.now(timezone.utc).isoformat(),
+            'user': {
+                'id': current_user.id,
+                'username': current_user.username,
+                'email': current_user.email
+            },
+            'filters': {
+                'category': category,
+                'start_date': start_date,
+                'end_date': end_date
+            },
+            'total_records': len(emissions)
+        }
+        
+        # Prepare export data
+        export_data = {
+            'metadata': metadata,
+            'emissions': [emission.to_dict() for emission in emissions]
+        }
+        
+        # Create response with proper JSON headers
+        response = Response(
+            json.dumps(export_data, indent=2, ensure_ascii=False),
+            mimetype='application/json',
+            headers={
+                'Content-Disposition': f'attachment; filename=emissions_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+            }
+        )
+        return response
 
