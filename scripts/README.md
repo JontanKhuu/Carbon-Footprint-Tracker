@@ -153,6 +153,264 @@ Creates the PostgreSQL database if it doesn't exist.
 
 ---
 
+### Docker Deployment Scripts
+
+#### `docker-build.sh` / `docker-build.ps1`
+Builds all Docker images for production deployment.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/docker-build.sh [compose-file]
+
+# Windows PowerShell
+.\scripts\docker-build.ps1 [-ComposeFile "docker-compose.prod.yml"] [-NoCache]
+```
+
+**Examples:**
+```bash
+# Build with cache (default)
+./scripts/docker-build.sh
+
+# Build without cache (clean build)
+.\scripts\docker-build.ps1 -NoCache
+
+# Use custom compose file
+./scripts/docker-build.sh docker-compose.custom.yml
+```
+
+**What it does:**
+- Builds all Docker images defined in docker-compose file
+- Validates Docker installation and compose file
+- Checks for .env file
+- Provides next steps after successful build
+
+---
+
+#### `docker-start.sh` / `docker-start.ps1`
+Starts all Docker containers for production deployment.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/docker-start.sh [compose-file] [--build]
+
+# Windows PowerShell
+.\scripts\docker-start.ps1 [-ComposeFile "docker-compose.prod.yml"] [-Build]
+```
+
+**Examples:**
+```bash
+# Start containers
+./scripts/docker-start.sh
+
+# Start and rebuild images
+.\scripts\docker-start.ps1 -Build
+
+# Use custom compose file
+./scripts/docker-start.sh docker-compose.prod.yml
+```
+
+**What it does:**
+- Starts all containers in detached mode (`-d`)
+- Waits for services to be healthy
+- Shows container status
+- Provides next steps (logs, migrations, health check)
+
+---
+
+#### `docker-status.sh` / `docker-status.ps1`
+Checks the status of all Docker containers and health endpoints.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/docker-status.sh [compose-file]
+
+# Windows PowerShell
+.\scripts\docker-status.ps1 [-ComposeFile "docker-compose.prod.yml"]
+```
+
+**What it does:**
+- Lists all containers and their states
+- Checks backend API health endpoint
+- Verifies database connection status
+- Provides troubleshooting tips if issues found
+
+**Exit codes:**
+- `0` - All containers running and healthy
+- `1` - Some containers not running or health checks failed
+
+---
+
+#### `docker-logs.sh` / `docker-logs.ps1`
+Shows logs from Docker containers.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/docker-logs.sh [compose-file] [service] [--follow] [tail-lines]
+
+# Windows PowerShell
+.\scripts\docker-logs.ps1 [-ComposeFile "docker-compose.prod.yml"] [-Service "backend"] [-Follow] [-Tail 100]
+```
+
+**Examples:**
+```bash
+# Show last 100 lines from all services
+./scripts/docker-logs.sh
+
+# Follow backend logs
+./scripts/docker-logs.sh docker-compose.prod.yml backend --follow
+
+# Show last 50 lines from frontend
+.\scripts\docker-logs.ps1 -Service frontend -Tail 50
+```
+
+**What it does:**
+- Shows container logs (all services or specific service)
+- Supports following logs in real-time
+- Configurable number of lines to show
+- Useful for debugging deployment issues
+
+---
+
+#### `docker-migrate.sh` / `docker-migrate.ps1`
+Runs database migrations in the backend container.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/docker-migrate.sh [compose-file] [action]
+
+# Windows PowerShell
+.\scripts\docker-migrate.ps1 [-ComposeFile "docker-compose.prod.yml"] [-Action "upgrade"]
+```
+
+**Actions:**
+- `upgrade` - Apply all pending migrations (default)
+- `downgrade` - Rollback last migration
+- `current` - Show current migration version
+- `history` - Show migration history
+
+**Examples:**
+```bash
+# Run migrations
+./scripts/docker-migrate.sh
+
+# Check current migration version
+.\scripts\docker-migrate.ps1 -Action current
+
+# Rollback last migration
+./scripts/docker-migrate.sh docker-compose.prod.yml downgrade
+```
+
+**What it does:**
+- Runs Flask-Migrate commands in backend container
+- Verifies backend container is running
+- Provides troubleshooting tips on failure
+
+---
+
+### Cloud Platform Deployment Guides
+
+#### `cloud-deploy-railway.md`
+Complete deployment checklist and guide for Railway platform.
+
+**Includes:**
+- Step-by-step deployment instructions
+- Environment variable configuration
+- Database setup
+- Migration commands
+- Troubleshooting tips
+
+**Usage:** Follow the checklist in the file when deploying to Railway.
+
+---
+
+#### `cloud-deploy-render.md`
+Complete deployment checklist and guide for Render platform.
+
+**Includes:**
+- Step-by-step deployment instructions
+- Environment variable configuration
+- Database setup
+- Migration commands
+- Troubleshooting tips
+
+**Usage:** Follow the checklist in the file when deploying to Render.
+
+---
+
+#### `cloud-deploy-aws.md`
+Complete deployment checklist and guide for AWS (EC2/ECS).
+
+**Includes:**
+- EC2 deployment steps
+- ECS deployment steps
+- RDS database setup
+- ECR image management
+- Troubleshooting tips
+
+**Usage:** Follow the checklist in the file when deploying to AWS.
+
+---
+
+### Cloud Platform Scripts
+
+#### `cloud-verify-health.sh` / `cloud-verify-health.ps1`
+Verifies that deployed cloud services are healthy.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/cloud-verify-health.sh <backend-url> [frontend-url]
+
+# Windows PowerShell
+.\scripts\cloud-verify-health.ps1 -BackendUrl "https://backend.railway.app" -FrontendUrl "https://frontend.railway.app"
+```
+
+**Examples:**
+```bash
+# Check both services
+./scripts/cloud-verify-health.sh https://backend.railway.app https://frontend.railway.app
+
+# Check backend only
+.\scripts\cloud-verify-health.ps1 -BackendUrl "https://backend.onrender.com"
+```
+
+**What it does:**
+- Tests backend API health endpoint
+- Checks database connection status
+- Verifies frontend accessibility
+- Provides troubleshooting tips if issues found
+
+---
+
+#### `cloud-migrate-railway.sh` / `cloud-migrate-railway.ps1`
+Runs database migrations on Railway platform.
+
+**Usage:**
+```bash
+# Linux/Mac
+./scripts/cloud-migrate-railway.sh [service-name]
+
+# Windows PowerShell
+.\scripts\cloud-migrate-railway.ps1 [-ServiceName "backend"]
+```
+
+**Prerequisites:**
+- Railway CLI installed: `npm i -g @railway/cli`
+- Logged in: `railway login`
+- Project linked: `railway link`
+
+**What it does:**
+- Runs `flask db upgrade` in Railway backend service
+- Verifies Railway CLI is installed
+- Provides troubleshooting tips on failure
+
+---
+
 ## Quick Start
 
 1. **Set up environment file:**
@@ -197,6 +455,69 @@ Creates the PostgreSQL database if it doesn't exist.
    ./scripts/backup-database.sh
    ```
 
+7. **Build Docker images:**
+   ```bash
+   # Windows
+   .\scripts\docker-build.ps1
+   
+   # Linux/Mac
+   ./scripts/docker-build.sh
+   ```
+
+8. **Start Docker containers:**
+   ```bash
+   # Windows
+   .\scripts\docker-start.ps1
+   
+   # Linux/Mac
+   ./scripts/docker-start.sh
+   ```
+
+9. **Check container status:**
+   ```bash
+   # Windows
+   .\scripts\docker-status.ps1
+   
+   # Linux/Mac
+   ./scripts/docker-status.sh
+   ```
+
+10. **Run database migrations:**
+    ```bash
+    # Windows
+    .\scripts\docker-migrate.ps1
+    
+    # Linux/Mac
+    ./scripts/docker-migrate.sh
+    ```
+
+### Cloud Platform Deployment
+
+1. **Choose your platform:**
+   - Railway: Follow `scripts/cloud-deploy-railway.md`
+   - Render: Follow `scripts/cloud-deploy-render.md`
+   - AWS: Follow `scripts/cloud-deploy-aws.md`
+
+2. **Run migrations (Railway):**
+   ```bash
+   # Install Railway CLI first
+   npm i -g @railway/cli
+   railway login
+   railway link
+   
+   # Run migrations
+   ./scripts/cloud-migrate-railway.sh
+   ```
+
+3. **Verify deployment:**
+   ```bash
+   # Windows
+   .\scripts\cloud-verify-health.ps1 -BackendUrl "https://your-backend.railway.app" -FrontendUrl "https://your-frontend.railway.app"
+   
+   # Linux/Mac
+   ./scripts/cloud-verify-health.sh https://your-backend.railway.app https://your-frontend.railway.app
+   ```
+
 ---
 
 ## Requirements
@@ -218,6 +539,15 @@ openssl rand -hex 32
 - **Ubuntu/Debian:** `sudo apt-get install postgresql-client`
 - **macOS:** `brew install postgresql`
 - **Windows:** Install PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/) or use Docker
+
+### For Docker Scripts
+- **Docker** and **Docker Compose** installed and running
+- Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+
+**Installation:**
+- **Windows/Mac:** [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- **Ubuntu/Debian:** `sudo apt-get install docker.io docker-compose`
+- **macOS:** `brew install docker docker-compose`
 
 ---
 
