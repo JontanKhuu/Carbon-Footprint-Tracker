@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { EmissionFilters, CreateEmissionRequest, EmissionStats, User, Emission, RegisterUserRequest, LoginUser, LoginResponse, RefreshTokenResponse, ActivitiesResponse } from '../types';
-import { getAccessToken, getRefreshToken, updateTokens, removeAuthUser } from '../utils/auth';
+import { getAccessToken, getRefreshToken, getCsrfToken, updateTokens, removeAuthUser } from '../utils/auth';
 
 // Create an axios instance with a base URL
 const api = axios.create({
@@ -10,13 +10,23 @@ const api = axios.create({
     },
 });
 
-// Request interceptor to add JWT token to requests
+// Request interceptor to add JWT token and CSRF token to requests
 api.interceptors.request.use(
     (config) => {
         const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        // Add CSRF token for state-changing operations (POST, PUT, DELETE, PATCH)
+        const method = config.method?.toUpperCase();
+        if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+            const csrfToken = getCsrfToken();
+            if (csrfToken) {
+                config.headers['X-CSRF-Token'] = csrfToken;
+            }
+        }
+        
         return config;
     },
     (error) => {
@@ -89,8 +99,8 @@ api.interceptors.response.use(
                     { refresh_token: refreshToken }
                 );
 
-                const { access_token, refresh_token } = response.data;
-                updateTokens(access_token, refresh_token);
+                const { access_token, refresh_token, csrf_token } = response.data;
+                updateTokens(access_token, refresh_token, csrf_token);
 
                 // Update the original request with new token
                 originalRequest.headers.Authorization = `Bearer ${access_token}`;

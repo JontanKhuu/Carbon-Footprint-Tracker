@@ -20,17 +20,17 @@ function Login() {
 
     try {
       const response = await loginUser({ usernameOrEmail, password } as LoginUser);
-      // Response now includes user, access_token, and refresh_token
-      const { user, access_token, refresh_token } = response.data;
+      // Response now includes user, access_token, refresh_token, and csrf_token
+      const { user, access_token, refresh_token, csrf_token } = response.data;
       
-      if (!user || !access_token || !refresh_token) {
+      if (!user || !access_token || !refresh_token || !csrf_token) {
         setError('Invalid response from server. Please try again.');
         setIsLoading(false);
         return;
       }
       
-      // Login updates localStorage and state synchronously
-      login(user, access_token, refresh_token);
+      // Login updates localStorage and state synchronously (includes CSRF token)
+      login(user, access_token, refresh_token, csrf_token);
       
       // Navigate immediately - isAuthenticated is now updated synchronously
       navigate('/dashboard');

@@ -495,13 +495,23 @@ def test_update_user_success(client, app):
         db.session.refresh(user)
         user_id = user.id
     
+    # Login to get authentication token
+    login_data = {
+        'usernameOrEmail': 'updateuser',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     update_data = {
         'username': 'updateduser',
         'email': 'updateduser@example.com',
         'password': 'NewPass123!'
     }
     
-    response = client.put(f'/api/users/{user_id}', json=update_data)
+    response = client.put(f'/api/users/{user_id}', json=update_data, headers=headers)
     assert response.status_code == 200
     data = response.get_json()
     assert data['username'] == 'updateduser'
@@ -533,9 +543,19 @@ def test_update_user_partial(client, app):
         user_id = user.id
         original_email = user.email
     
+    # Login to get authentication token
+    login_data = {
+        'usernameOrEmail': 'partialuser',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     # Update only username
     update_data = {'username': 'newpartialuser'}
-    response = client.put(f'/api/users/{user_id}', json=update_data)
+    response = client.put(f'/api/users/{user_id}', json=update_data, headers=headers)
     assert response.status_code == 200
     data = response.get_json()
     assert data['username'] == 'newpartialuser'
@@ -543,7 +563,7 @@ def test_update_user_partial(client, app):
     
     # Update only email
     update_data = {'email': 'newpartial@example.com'}
-    response = client.put(f'/api/users/{user_id}', json=update_data)
+    response = client.put(f'/api/users/{user_id}', json=update_data, headers=headers)
     assert response.status_code == 200
     data = response.get_json()
     assert data['email'] == 'newpartial@example.com'
@@ -555,11 +575,32 @@ def test_update_user_partial(client, app):
         db.session.commit()
 
 
-def test_update_user_not_found(client):
+def test_update_user_not_found(client, app):
     """Test PUT /users/<id> - 404 for non-existent user"""
+    # Create a test user and login to get token
+    with app.app_context():
+        user = User(username='notfounduser', email='notfound@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+    
+    login_data = {
+        'usernameOrEmail': 'notfounduser',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     update_data = {'username': 'newname'}
-    response = client.put('/api/users/99999', json=update_data)
+    response = client.put('/api/users/99999', json=update_data, headers=headers)
     assert response.status_code == 404
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
 
 
 def test_update_user_invalid_email(client, app):
@@ -573,9 +614,19 @@ def test_update_user_invalid_email(client, app):
         db.session.refresh(user)
         user_id = user.id
     
+    # Login to get authentication token
+    login_data = {
+        'usernameOrEmail': 'invalidemail',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     # Test invalid email format (not ending with .com)
     update_data = {'email': 'invalid@example.org'}
-    response = client.put(f'/api/users/{user_id}', json=update_data)
+    response = client.put(f'/api/users/{user_id}', json=update_data, headers=headers)
     assert response.status_code == 400
     data = response.get_json()
     assert 'error' in data
@@ -583,7 +634,7 @@ def test_update_user_invalid_email(client, app):
     
     # Test invalid email format (no @)
     update_data = {'email': 'invalidemail'}
-    response = client.put(f'/api/users/{user_id}', json=update_data)
+    response = client.put(f'/api/users/{user_id}', json=update_data, headers=headers)
     assert response.status_code == 400
     
     # Cleanup
@@ -607,9 +658,19 @@ def test_update_user_duplicate_username(client, app):
         user1_id = user1.id
         user2_id = user2.id
     
+    # Login as user2 to get authentication token
+    login_data = {
+        'usernameOrEmail': 'user2',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     # Try to update user2's username to user1's username
     update_data = {'username': 'user1'}
-    response = client.put(f'/api/users/{user2_id}', json=update_data)
+    response = client.put(f'/api/users/{user2_id}', json=update_data, headers=headers)
     assert response.status_code == 400
     data = response.get_json()
     assert 'error' in data
@@ -637,9 +698,19 @@ def test_update_user_duplicate_email(client, app):
         user1_id = user1.id
         user2_id = user2.id
     
+    # Login as user2 to get authentication token
+    login_data = {
+        'usernameOrEmail': 'emailuser2',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     # Try to update user2's email to user1's email
     update_data = {'email': 'emailuser1@example.com'}
-    response = client.put(f'/api/users/{user2_id}', json=update_data)
+    response = client.put(f'/api/users/{user2_id}', json=update_data, headers=headers)
     assert response.status_code == 400
     data = response.get_json()
     assert 'error' in data
@@ -663,7 +734,17 @@ def test_delete_user_success(client, app):
         db.session.refresh(user)
         user_id = user.id
     
-    response = client.delete(f'/api/users/{user_id}')
+    # Login to get authentication token
+    login_data = {
+        'usernameOrEmail': 'deleteuser',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
+    response = client.delete(f'/api/users/{user_id}', headers=headers)
     assert response.status_code == 200
     data = response.get_json()
     assert 'message' in data
@@ -674,10 +755,31 @@ def test_delete_user_success(client, app):
         assert deleted_user is None
 
 
-def test_delete_user_not_found(client):
+def test_delete_user_not_found(client, app):
     """Test DELETE /users/<id> - 404 for non-existent user"""
-    response = client.delete('/api/users/99999')
+    # Create a test user and login to get token
+    with app.app_context():
+        user = User(username='notfounddelete', email='notfounddelete@example.com')
+        user.set_password('testpass123')
+        db.session.add(user)
+        db.session.commit()
+    
+    login_data = {
+        'usernameOrEmail': 'notfounddelete',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
+    response = client.delete('/api/users/99999', headers=headers)
     assert response.status_code == 404
+    
+    # Cleanup
+    with app.app_context():
+        db.session.delete(user)
+        db.session.commit()
 
 
 def test_delete_user_cascade_emissions(client, app):
@@ -720,8 +822,18 @@ def test_delete_user_cascade_emissions(client, app):
         emission1_id = emission1.id
         emission2_id = emission2.id
     
+    # Login to get authentication token
+    login_data = {
+        'usernameOrEmail': 'cascadeuser',
+        'password': 'testpass123'
+    }
+    login_response = client.post('/api/users/login', json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.get_json()['access_token']
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
     # Delete the user
-    response = client.delete(f'/api/users/{user_id}')
+    response = client.delete(f'/api/users/{user_id}', headers=headers)
     assert response.status_code == 200
     
     # Verify user is deleted

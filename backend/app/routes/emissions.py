@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, current_app
 from app import db
 from app.models.emission import Emission
 from app.models.emission_history import EmissionHistory
@@ -16,6 +16,7 @@ from app.services.emission_calculator import (
     EmissionCalculatorError
 )
 from app.utils.jwt import token_required
+from app.utils.csrf import csrf_protect
 
 emissions_bp = Blueprint('emissions', __name__)
 
@@ -424,6 +425,7 @@ def get_emission(emission_id, current_user):
 
 @emissions_bp.route('', methods=['POST'])
 @token_required
+@csrf_protect
 def create_emission(current_user):
     """
     Create New Emission
@@ -598,6 +600,7 @@ def create_emission(current_user):
 
 @emissions_bp.route('/<int:emission_id>', methods=['PUT'])
 @token_required
+@csrf_protect
 def update_emission(emission_id, current_user):
     """
     Update Emission
@@ -782,6 +785,7 @@ def update_emission(emission_id, current_user):
 
 @emissions_bp.route('/<int:emission_id>', methods=['DELETE'])
 @token_required
+@csrf_protect
 def delete_emission(emission_id, current_user):
     """
     Delete Emission

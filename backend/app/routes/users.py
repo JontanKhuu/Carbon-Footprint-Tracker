@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from app import db, limiter
 from app.models.user import User
 from app.utils.jwt import generate_token, verify_token, token_required
+from app.utils.csrf import csrf_protect
 from flask_limiter.util import get_remote_address
 import re
 
@@ -308,7 +309,9 @@ def create_user():
 
 
 @users_bp.route('/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
+@token_required
+@csrf_protect
+def update_user(user_id, current_user):
     """
     Update User
     ---
@@ -386,7 +389,9 @@ def update_user(user_id):
 
 
 @users_bp.route('/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
+@token_required
+@csrf_protect
+def delete_user(user_id, current_user):
     """
     Delete User
     ---
@@ -517,10 +522,10 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid credentials'}), 401
     
-    # Generate JWT tokens
+    # Generate JWT tokens (includes CSRF token)
     tokens = generate_token(user.id, user.username, user.email)
     
-    # Return user data and tokens
+    # Return user data and tokens (including CSRF token)
     return jsonify({
         'user': user.to_dict(),
         **tokens
@@ -590,13 +595,14 @@ def refresh_token():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Generate new access token
+        # Generate new access token (includes new CSRF token)
         tokens = generate_token(user.id, user.username, user.email)
         
-        # Return new access token (and new refresh token)
+        # Return new access token (and new refresh token) with CSRF token
         return jsonify({
             'access_token': tokens['access_token'],
             'refresh_token': tokens['refresh_token'],
+            'csrf_token': tokens['csrf_token'],  # Include CSRF token in response
             'expires_in': tokens['expires_in'],
             'token_type': tokens['token_type']
         }), 200
