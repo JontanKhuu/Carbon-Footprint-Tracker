@@ -52,12 +52,18 @@ def debug_routes():
     tags:
       - Health
     summary: List all registered routes (debug endpoint)
-    description: Returns a list of all registered routes for debugging purposes
+    description: Returns a list of all registered routes for debugging purposes. Only available in development mode.
     security: []  # No authentication required
     responses:
       200:
         description: List of routes
+      404:
+        description: Endpoint disabled in production
     """
+    # Disable debug endpoints in production
+    if current_app.config.get('FLASK_ENV') == 'production':
+        from flask import abort
+        abort(404)
     routes = []
     for rule in current_app.url_map.iter_rules():
         routes.append({
@@ -105,12 +111,18 @@ def debug_headers():
     tags:
       - Health
     summary: Debug request headers (debug endpoint)
-    description: Returns all request headers for debugging authentication issues
+    description: Returns all request headers for debugging authentication issues. Only available in development mode.
     security: []  # No authentication required
     responses:
       200:
         description: Request headers
+      404:
+        description: Endpoint disabled in production
     """
+    # Disable debug endpoints in production
+    if current_app.config.get('FLASK_ENV') == 'production':
+        from flask import abort
+        abort(404)
     from flask import request
     headers = dict(request.headers)
     return jsonify({
