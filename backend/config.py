@@ -16,6 +16,9 @@ class Config:
     # Rate limiting settings
     RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL')  # Optional: Redis URL for distributed rate limiting
     RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'
+    
+    # CSRF protection settings
+    CSRF_ENABLED = os.environ.get('CSRF_ENABLED', 'true').lower() == 'true'
 
 
 class DevelopmentConfig(Config):
@@ -44,6 +47,8 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
         'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
+    # Disable CSRF protection in tests (tests don't need CSRF protection)
+    CSRF_ENABLED = False
 
 
 config = {

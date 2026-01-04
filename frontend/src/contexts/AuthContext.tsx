@@ -5,7 +5,7 @@ import { getAuthUser, setAuthUser, removeAuthUser, getAccessToken } from '../uti
 
 interface AuthContextType {
   user: User | null;
-  login: (user: User, accessToken: string, refreshToken: string) => void;
+  login: (user: User, accessToken: string, refreshToken: string, csrfToken?: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -23,9 +23,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const navigate = useNavigate();
 
-  const login = (userData: User, accessToken: string, refreshToken: string) => {
+  const login = (userData: User, accessToken: string, refreshToken: string, csrfToken?: string) => {
     // Store in localStorage first (synchronous)
-    setAuthUser(userData, accessToken, refreshToken);
+    setAuthUser(userData, accessToken, refreshToken, csrfToken);
     
     // Update user state and isAuthenticated synchronously
     // This ensures the state is updated before navigation

@@ -21,6 +21,7 @@ JWT_REFRESH_EXPIRATION_DAYS = 7  # Refresh token expires in 7 days
 def generate_token(user_id: int, username: str, email: str) -> dict:
     """
     Generate JWT access token and refresh token for a user.
+    Includes CSRF token in the access token payload for CSRF protection.
     
     Args:
         user_id: User's ID
@@ -28,16 +29,23 @@ def generate_token(user_id: int, username: str, email: str) -> dict:
         email: User's email
     
     Returns:
-        Dictionary containing 'access_token', 'refresh_token', and 'expires_in'
+        Dictionary containing 'access_token', 'refresh_token', 'csrf_token', and 'expires_in'
     """
+    # Lazy import to avoid circular dependency
+    from app.utils.csrf import generate_csrf_token
+    
     now = datetime.now(timezone.utc)
     
-    # Access token payload
+    # Generate CSRF token
+    csrf_token = generate_csrf_token()
+    
+    # Access token payload (includes CSRF token)
     access_payload = {
         'user_id': user_id,
         'username': username,
         'email': email,
         'type': 'access',
+        'csrf_token': csrf_token,  # Include CSRF token in JWT
         'iat': now,
         'exp': now + timedelta(hours=JWT_EXPIRATION_HOURS)
     }
@@ -57,6 +65,7 @@ def generate_token(user_id: int, username: str, email: str) -> dict:
     return {
         'access_token': access_token,
         'refresh_token': refresh_token,
+        'csrf_token': csrf_token,  # Return CSRF token separately for client storage
         'expires_in': JWT_EXPIRATION_HOURS * 3600,  # seconds
         'token_type': 'Bearer'
     }

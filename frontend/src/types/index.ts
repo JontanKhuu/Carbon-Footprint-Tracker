@@ -84,6 +84,7 @@ export interface LoginResponse {
   user: User;
   access_token: string;
   refresh_token: string;
+  csrf_token: string;
   expires_in: number;
   token_type: string;
 }
@@ -91,6 +92,7 @@ export interface LoginResponse {
 export interface RefreshTokenResponse {
   access_token: string;
   refresh_token: string;
+  csrf_token: string;
   expires_in: number;
   token_type: string;
 }
